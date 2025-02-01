@@ -54,7 +54,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 # BSP specific compiler flags
 #
 set(RTEMS_CFLAGS "${RTEMS_BSP_CFLAGS} -ffunction-sections -fdata-sections -O2 -g -isystem${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}/lib/include")
-set(RTEMS_LDFLAGS "-qrtems -Wl,--gc-sections -B${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}/lib")
+set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -qrtems -Wl,--gc-sections -B${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}/lib")
 
 set(CMAKE_C_FLAGS "${RTEMS_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${RTEMS_CFLAGS}")
