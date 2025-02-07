@@ -1,4 +1,4 @@
-define arm-crash
+define rtems-crash
     set $code = $arg0
     set $r0 = ((const rtems_exception_frame *) $code)->register_r0
     set $r1 = ((const rtems_exception_frame *) $code)->register_r1
