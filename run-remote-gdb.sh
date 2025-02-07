@@ -46,16 +46,22 @@ if [ -z "$IP" ]; then
     IP="localhost:1234"
 fi
 
-ARGS="-ex \"target remote $IP\""
+ARGS="-ex \"target remote $IP\" -ex \"source $RTEMS_TOP/src/rtems-tools/tools/gdb/python/__init__.py\" "
 
 # Exec the arm crash handler script
 if [ "$ARCH" = "arm" ]; then
     ARGS="-ix \"$TOP/gdb/arm-crash.gdb\" $ARGS"
+elif [ "$ARCH" = "i386" ]; then
+    ARGS="-ix \"$TOP/gdb/i386-crash.gdb\" $ARGS"
 fi
 
 # We have been asked to load a symfile
 if [ ! -z "$SYMFILE" ]; then
     ARGS="-ex \"set auto-load safe-path /\" -ex \"symbol-file $SYMFILE\" -ex \"b bsp_fatal_extension\" $ARGS"
+fi
+
+if [ ! -d "$TOP/../host/linux-x86_64" ]; then
+    TOP="$RTEMS_TOP/scripts"
 fi
 
 CMD="\"$TOP/../host/linux-x86_64/bin/$ARCH-rtems6-gdb\" $ARGS"
