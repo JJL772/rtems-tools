@@ -4,6 +4,10 @@ set -e
 TOP="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 echo $TOP
 
+function usage {
+    echo "USAGE: run-remote-gdb.sh -a arch [-s symfile/path.obj] [-i ip]"
+}
+
 while test $# -gt 0; do
     case $1 in
     -a)
@@ -27,8 +31,12 @@ while test $# -gt 0; do
         shift 2
         ;;
     --ip=*)
-        IP="$(echo $1 | cut =d '=' -f2)"
+        IP="$(echo $1 | cut -d '=' -f2)"
         shift
+        ;;
+    -h)
+        usage
+        exit 0
         ;;
     *)
         ARGS="$ARGS $1"
@@ -36,7 +44,7 @@ while test $# -gt 0; do
 done
 
 if [ -z "$ARCH" ]; then
-    echo "-a or --arch must be specified"
+    usage
     exit 1
 fi
 
