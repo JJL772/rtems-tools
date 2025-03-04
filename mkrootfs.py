@@ -12,7 +12,7 @@ parser.add_argument('-i', type=str, required=True, help='Directory containing ro
 parser.add_argument('-o', type=str, required=True, help='Resulting C source file')
 
 class RootfsFile:
-    def __init__(self, name: str, bits: int, uid: int, gid: int):
+    def __init__(self, name: str, bits: str, uid: str, gid: str):
         self.name = name
         self.bits = bits
         self.uid = uid
@@ -38,9 +38,9 @@ def parse_config(dir: str) -> list[RootfsFile]:
             m.append(t[i])
 
         if len(m) > 0:
-            files.append(RootfsFile(m[0], int(m[1]) if len(m) > 1 else 0o644,
-                                    int(m[2]) if len(m) > 2 else 0,
-                                    int(m[3]) if len(m) > 3 else 0))
+            files.append(RootfsFile(m[0], m[1].rstrip() if len(m) > 1 else '0644',
+                                    m[2].rstrip() if len(m) > 2 else '0',
+                                    m[3].rstrip() if len(m) > 3 else '0'))
     return files
 
 def main():
