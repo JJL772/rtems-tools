@@ -34,7 +34,7 @@ function(rtems_add_executable TARGET )
             DESTINATION "${CMAKE_INSTALL_BINDIR}/RTEMS-${RTEMS_BSP}"
         )
     else()
-        install(TARGETS "${TARGET}-boot" "${TARGET}")
+        #install(TARGETS "${TARGET}-boot" "${TARGET}")
         install(
             FILES "${CMAKE_BINARY_DIR}/${TARGET}.boot"
             DESTINATION "${CMAKE_INSTALL_BINDIR}"
