@@ -47,23 +47,25 @@ function(rtems_add_executable TARGET)
 
     # Generate a stage 2 exe with embedded symbol table
     add_executable(
-        ${TARGET}.exe $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
+        ${TARGET}-exe $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
     )
 
     # Link against the same libraries as stage 1 executable
     target_link_libraries(
-        ${TARGET}.exe $<TARGET_PROPERTY:${TARGET},LINK_LIBRARIES>
+        ${TARGET}-exe $<TARGET_PROPERTY:${TARGET},LINK_LIBRARIES>
     )
 
     set_target_properties(
-        ${TARGET}.exe PROPERTIES LINKER_LANGUAGE C
+        ${TARGET}-exe PROPERTIES
+            LINKER_LANGUAGE C
+            OUTPUT_NAME ${TARGET}.exe
     )
 
     # Generate a flat binary file that can be directly booted
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.boot"
         COMMAND "${CMAKE_OBJCOPY}" -O binary "${TARGET}.exe" "${TARGET}.boot"
-        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.exe"
+        DEPENDS "${TARGET}-exe"
         COMMENT "Generating bootable image ${TARGET}.boot"
     )
 
