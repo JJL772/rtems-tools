@@ -1,0 +1,18 @@
+# Additional symbol refs
+sigaction
+pthread_attr_setscope
+pthread_attr_setschedpolicy
+pthread_attr_getschedpolicy
+pthread_attr_getschedparam
+pthread_join
+pthread_setschedparam
+pthread_attr_setschedparam
+pthread_detach
+pthread_equal
+pthread_key_delete
+pthread_setname_np
+pthread_mutexattr_settype
+pthread_mutexattr_setprotocol
+pthread_mutex_trylock
+pthread_mutexattr_getprotocol
+clock_getres
