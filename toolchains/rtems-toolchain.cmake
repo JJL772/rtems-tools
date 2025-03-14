@@ -1,5 +1,5 @@
 set(CMAKE_SYSTEM_NAME "RTEMS")
-set(CMAKE_SYSTEM_PROCESSOR "powerpc")
+set(CMAKE_SYSTEM_PROCESSOR "${RTEMS_ARCH}")
 
 set(CMAKE_CROSSCOMPILING ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -55,10 +55,17 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 #
+# Misc definitions
+#
+set(RTEMS_VER "${RTEMS_VERSION}")
+set(RTEMS_BSP_DIR "${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}")
+set(RTEMS_BSP_HOST_DIR "${RTEMS_TOP}/host/${HOST_DIR}/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}")
+
+#
 # BSP specific compiler flags
 #
-set(RTEMS_CFLAGS "${RTEMS_BSP_CFLAGS} -DBSP_${RTEMS_BSP}=1 -ffunction-sections -fdata-sections -O2 -g -isystem${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}/lib/include")
-set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -qrtems -Wl,--gc-sections -B${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}/lib")
+set(RTEMS_CFLAGS "${RTEMS_BSP_CFLAGS} -DBSP_${RTEMS_BSP}=1 -ffunction-sections -fdata-sections -O2 -g -isystem${RTEMS_BSP_DIR}/lib/include")
+set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -qrtems -Wl,--gc-sections -B${RTEMS_BSP_DIR}/lib")
 
 set(CMAKE_C_FLAGS "${RTEMS_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${RTEMS_CFLAGS}")
