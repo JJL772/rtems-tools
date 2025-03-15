@@ -9,6 +9,8 @@ import sys
 import string
 import tarfile
 
+import bin2as
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', type=str, required=True, help='Directory containing rootfs and config file')
 parser.add_argument('-o', type=str, required=True, help='Resulting C source file')
@@ -173,7 +175,7 @@ def _generate_tarball(dir: str, out: str, macros: dict):
                filter = lambda x : filt(file, x))
 
     tf.close()
-    _bin2c(f'{out}.tar', out, 'tar_rootfs')
+    bin2as.bin2as('tar_rootfs', f'{out}.tar', out)
 
 
 def main():

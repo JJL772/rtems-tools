@@ -105,6 +105,8 @@ endfunction()
 # Helper function to add and generate a rootfs.
 # This will automatically add the rootfs.c file to your target. call rootfs_unpack() to unpack at runtime
 function(rtems_add_rootfs TARGET DIR TYPE)
+    enable_language(ASM)
+
     # Generate list of files we'll depend on
     file(GLOB_RECURSE ROOTFS_FILES "${DIR}/**")
 
@@ -114,9 +116,9 @@ function(rtems_add_rootfs TARGET DIR TYPE)
     endif()
 
     add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.c"
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.S"
         COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mkrootfs.py" "${ROOTFS_ARGS}"
-            -o "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.c" -i "${DIR}"
+            -o "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.S" -i "${DIR}"
             -m "BSP_LIBS=${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}/lib"
             -m "TOOLCHAIN_LIBS=${RTEMS_TOP}/host/linux-x86_64/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/lib"
         DEPENDS ${ROOTFS_FILES}
@@ -124,6 +126,6 @@ function(rtems_add_rootfs TARGET DIR TYPE)
     
     # Add rootfs sources to target
     target_sources(
-        ${TARGET} PRIVATE "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.c"
+        ${TARGET} PRIVATE "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.S"
     )
 endfunction()
