@@ -6,12 +6,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (NOT DEFINED RTEMS_VERSION)
     message(WARNING "RTEMS_VERSION not set, defaulting to 6.0")
-    set(RTEMS_VERSION 6)
+    set(RTEMS_VERSION 6.0)
 endif()
 
+# Break up RTEMS_VERSION into chunks
+string(REGEX MATCH "([0-9]+)\.([0-9]+)\.?([0-9]+)?" RTEMS_FULL_VERSION "${RTEMS_VERSION}")
+set(RTEMS_MAJOR "${CMAKE_MATCH_1}")
+set(RTEMS_MINOR "${CMAKE_MATCH_2}")
+set(RTEMS_PATCH "${CMAKE_MATCH_3}")
+
 # RTEMS 4.X doesn't use a version prefix on the tool, i.e. powerpc-rtems-gcc instead of powerpc-rtems6-gcc
-if (NOT DEFINED RTEMS_TOOL_VERSION AND NOT "${RTEMS_VERSION}" STREQUAL "4")
-    set(RTEMS_TOOL_VERSION "${RTEMS_VERSION}")
+if (NOT DEFINED RTEMS_TOOL_VERSION AND NOT "${RTEMS_MAJOR}" STREQUAL "4")
+    set(RTEMS_TOOL_VERSION "${RTEMS_MAJOR}")
 endif()
 
 if (NOT DEFINED RTEMS_ARCH)
@@ -53,6 +59,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # When testing ${CMAKE_C[XX]_COMPILER} functionality, don't try to link a test application
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(RTEMS_SUBDIR "rtems")
 
 #
 # Misc definitions
