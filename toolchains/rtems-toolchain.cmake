@@ -73,7 +73,21 @@ set(RTEMS_BSP_HOST_DIR "${RTEMS_TOP}/host/${HOST_DIR}/${RTEMS_ARCH}-rtems${RTEMS
 # BSP specific compiler flags
 #
 set(RTEMS_CFLAGS "${RTEMS_BSP_CFLAGS} -DBSP_${RTEMS_BSP}=1 -ffunction-sections -fdata-sections -O2 -g -isystem${RTEMS_BSP_DIR}/lib/include")
-set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -qrtems -Wl,--gc-sections -B${RTEMS_BSP_DIR}/lib")
+set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -B${RTEMS_BSP_DIR}/lib -qrtems -Wl,--gc-sections")
+
+if ("${RTEMS_MAJOR}" STREQUAL "4")
+    set(RTEMS_LDFLAGS "${RTEMS_LDFLAGS} -specs bsp_specs")
+endif()
+
+if ("${RTEMS_NETWORK_STACK}" STREQUAL "BSD")
+    set(RTEMS_CFLAGS "${RTEMS_CFLAGS} -DRTEMS_BSD_STACK=1")
+elseif("${RTEMS_NETWORK_STACK}" STREQUAL "LEGACY")
+    set(RTEMS_CFLAGS "${RTEMS_CFLAGS} -DRTEMS_LEGACY_STACK=1")
+elseif ("${RTEMS_NETWORK_STACK}" STREQUAL "LWIP")
+    set(RTEMS_CFLAGS "${RTEMS_CFLAGS} -DRTEMS_LWIP_STACK=1")
+else()
+    message(FATAL_ERROR "Invalid network stack ${RTEMS_NETWORK_STACK}, must be BSD, LEGACY or LWIP")
+endif()
 
 set(CMAKE_C_FLAGS "${RTEMS_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${RTEMS_CFLAGS}")
