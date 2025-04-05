@@ -69,7 +69,7 @@ if [ ! -z "$SYMFILE" ]; then
 fi
 
 if [ ! -d "$TOP/../host/linux-x86_64" ]; then
-    TOP="$RTEMS_TOP/scripts"
+    TOP="$RTEMS_TOP/tools"
 fi
 
 CMD="\"$TOP/../host/linux-x86_64/bin/$ARCH-rtems6-gdb\" $ARGS"
