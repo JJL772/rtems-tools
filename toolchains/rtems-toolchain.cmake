@@ -60,13 +60,16 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 # When testing ${CMAKE_C[XX]_COMPILER} functionality, don't try to link a test application
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-set(RTEMS_SUBDIR "rtems")
+# May be set by individual toolchain files
+if (NOT DEFINED RTEMS_SUBDIR)
+    set(RTEMS_SUBDIR "rtems")
+endif()
 
 #
 # Misc definitions
 #
 set(RTEMS_VER "${RTEMS_VERSION}")
-set(RTEMS_BSP_DIR "${RTEMS_TOP}/target/rtems/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}")
+set(RTEMS_BSP_DIR "${RTEMS_TOP}/target/${RTEMS_SUBDIR}/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}")
 set(RTEMS_BSP_HOST_DIR "${RTEMS_TOP}/host/${HOST_DIR}/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}")
 
 #
