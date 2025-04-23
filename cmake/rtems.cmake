@@ -81,6 +81,11 @@ function(rtems_add_executable TARGET)
         DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.boot"
     )
     
+    add_custom_target(
+        "${TARGET}-obj" ALL
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+    )
+
     # Install to an EPICS-style "shared" prefix
     if (SHARED_PREFIX)
         install(
