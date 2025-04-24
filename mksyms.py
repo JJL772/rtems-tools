@@ -77,8 +77,17 @@ def _gen_refs(file: str, syms: set):
         num = 0
         for sym in syms:
             fp.write(f'asm(".set __symref_alias_{num},{sym}\\n");\n')
-            fp.write(f'extern int __symref_alias_{num};\n')
+            fp.write(f'extern void* __symref_alias_{num};\n')
             num += 1
+        fp.write('void __symbolRefDummy() {static int n = 0; n++;\n')
+        num = 0
+        for sym in syms:
+            # This is getting annoying. GCC is WAYYYYYYYYYYY TOO aggressive with the symbol removal.
+            # Like seriously. I'm *telling you* to emit a reference, very explicitly. Please do it!
+            # Do you really expect me to add --undefine ... on the command line for EVERY symbol??? really?
+            fp.write(f'__symref_alias_{num} = (n % 2) ? __symref_alias_{num} : 0;\n')
+            num += 1
+        fp.write('\n}')
 
 def _load_list_file(file: str) -> set[str]:
     """

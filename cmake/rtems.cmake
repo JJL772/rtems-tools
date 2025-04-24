@@ -30,9 +30,19 @@ include(GNUInstallDirs)
 # Helper command to add an ELF executable and generate a bootable image from it
 function(rtems_add_executable TARGET)
 
+    # Generate list of forced symbol refs
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c"
+        COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
+            -o "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c"
+            -r "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base.sym"
+        COMMENT "Generating additional symbol refs"
+        DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base.sym"
+    )
+
     # Generate base executable that will be used to feed rtems-syms
     add_executable(
-        ${TARGET} ${ARGN}
+        ${TARGET} "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c" ${ARGN}
     )
 
     # Generate a loadable symbols object
@@ -94,6 +104,7 @@ function(rtems_add_executable TARGET)
             RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/RTEMS-${RTEMS_BSP}"
             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/RTEMS-${RTEMS_BSP}"
             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/RTEMS-${RTEMS_BSP}"
+            PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/RTEMS-${RTEMS_BSP}"
         )
         install(
             FILES "${CMAKE_BINARY_DIR}/${TARGET}.boot" "${CMAKE_BINARY_DIR}/${TARGET}.obj" "${CMAKE_BINARY_DIR}/${TARGET}.exe"

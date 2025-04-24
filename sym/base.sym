@@ -16,3 +16,6 @@ pthread_mutexattr_setprotocol
 pthread_mutex_trylock
 pthread_mutexattr_getprotocol
 clock_getres
+pathconf
+truncate
+utime
