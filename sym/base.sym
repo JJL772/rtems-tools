@@ -19,3 +19,6 @@ clock_getres
 pathconf
 truncate
 utime
+__dso_handle
+unlinkat
+_GLOBAL_OFFSET_TABLE_
