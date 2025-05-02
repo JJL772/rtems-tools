@@ -41,7 +41,8 @@ REMOVE_ARGS = [
     '-mindirect-branch-cs-prefix',
     '-mfunction-return=thunk-extern',
     '-fzero-call-used-regs=used-gpr',
-    '-ftrivial-auto-var-init=zero'
+    '-ftrivial-auto-var-init=zero',
+    '-mcpu=5282' # clang only supports a few 68k CPUs
 ]
 
 def main():
