@@ -118,6 +118,43 @@ function(rtems_add_executable TARGET)
     endif()
 endfunction()
 
+function(rtems_add_object TARGET BASE_TARGET)
+
+    add_library(
+        ${TARGET} OBJECT
+        ${ARGN}
+    )
+    
+    set(STUPID $<TARGET_OBJECTS:${TARGET}>)
+    foreach(IDIOT ${STUPID})
+        set(YOU_ARE_STUPID "${YOU_ARE_STUPID} ${IDIOT}")
+    endforeach()
+    
+    set(SPACE " ")
+    set(MY_DUMB_LIST "$<LIST:JOIN,$<TARGET_OBJECTS:${TARGET}>,\" \">")
+    string(REPLACE " " " " STUPID_HACK "${MY_DUMB_LIST}")
+
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+        COMMAND "${CMAKE_RTEMS_LD}" -O elf -e rtemsEntryPoint -b "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
+            -L "${RTEMS_BSP_DIR}/lib" -r "${RTEMS_TOP}/target/rtems" -B "${RTEMS_ARCH}/${RTEMS_BSP}"
+            -L "${CMAKE_BINARY_DIR}" -l${TARGET} -o "${CMAKE_BINARY_DIR}/${TARGET}.obj" ${STUPID_HACK}
+        DEPENDS "${TARGET}" "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe" 
+    )
+
+    add_custom_target(
+        "${TARGET}-obj" ALL
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+    )
+
+    # Install the resutling loadable object
+    install(
+        FILES "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+
+endfunction()
+
 # Helper function to add and generate a rootfs.
 # This will automatically add the rootfs.c file to your target. call rootfs_unpack() to unpack at runtime
 function(rtems_add_rootfs TARGET DIR TYPE)
