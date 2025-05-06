@@ -124,6 +124,40 @@ function(rtems_add_executable TARGET)
     endif()
 endfunction()
 
+# Add a new object
+# Parameters:
+#  TARGET       - Name of the target to add
+#  BASE_TARGET  - Name of the base executable
+function(rtems_add_object TARGET BASE_TARGET)
+
+    add_library(
+        ${TARGET} OBJECT
+        ${ARGN}
+    )
+
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+        COMMAND "${CMAKE_RTEMS_LD}" -O elf -e rtemsEntryPoint -b "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
+            -L "${RTEMS_BSP_DIR}/lib" -r "${RTEMS_TOP}/target/rtems" -B "${RTEMS_ARCH}/${RTEMS_BSP}"
+            -L "${CMAKE_BINARY_DIR}" -o "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+            $<TARGET_OBJECTS:${TARGET}>
+        DEPENDS "${TARGET}" "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
+        COMMAND_EXPAND_LISTS
+    )
+
+    add_custom_target(
+        "${TARGET}-obj" ALL
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+    )
+
+    # Install the resutling loadable object
+    install(
+        FILES "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+
+endfunction()
+
 # Helper function to add and generate a rootfs.
 # This will automatically add the rootfs.c file to your target. call rootfs_unpack() to unpack at runtime
 function(rtems_add_rootfs TARGET DIR TYPE)
