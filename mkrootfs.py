@@ -110,7 +110,7 @@ def _parse_config(dir: str, macros: dict) -> list[RootfsFile]:
                                     m[4].rstrip() if len(m) > 4 else '0'))
     return files
 
-def _generate_source(dir: str, out: str, macros: dict):
+def generate_source(dir: str, out: str, macros: dict):
     """
     Generate a rootfs.c file, instead of using the tarball method
 
@@ -146,7 +146,7 @@ def _generate_source(dir: str, out: str, macros: dict):
         fp.write('}\n')
 
 
-def _generate_tarball(dir: str, out: str, macros: dict):
+def generate_tarball(dir: str, out: str, macros: dict):
     """
     Generate a rootfs.c that encodes a tar file to be used with rtems tarfs
 
@@ -190,9 +190,9 @@ def main():
     print(macros)
 
     if args.t:
-        _generate_tarball(args.i, args.o, macros)
+        generate_tarball(args.i, args.o, macros)
     else:
-        _generate_source(args.i, args.o, macros)
+        generate_source(args.i, args.o, macros)
 
 
 if __name__ == '__main__':
