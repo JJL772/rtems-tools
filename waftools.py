@@ -163,3 +163,50 @@ def check_headers(conf, headers: dict, allow_failure: bool = True):
         except Exception as e:
             if not allow_failure:
                 raise e
+
+
+def has_c_header(conf, header: str) -> bool:
+    """
+    Checks for a specific header and returns true if it's found
+
+    Parameters
+    ----------
+    conf :
+        Config context
+    header : str
+        Build context
+    
+    Returns
+    -------
+    True if the header is found, false otherwise
+    """
+    try:
+        conf.check_cc(
+            use='rtemsdefaultconfig',
+            header_name=header,
+            features='c'
+        )
+    except:
+        return False
+    return True
+
+def has_lib(conf, libs: list[str]) -> bool:
+    """
+    Checks for a specific library
+
+    Parameters
+    ----------
+    conf :
+        Config context
+    lib : list[str]
+        Name of the library
+    """
+    try:
+        conf.check_cc(
+            use=libs + ['rtemsdefaultconfig'],
+            features='cprogram',
+            msg=f'Checking for {" ".join(libs)}'
+        )
+    except:
+        return False
+    return True
