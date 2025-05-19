@@ -3,6 +3,13 @@
 #
 
 import rtems_waf.rtems as rtems
+from waflib.Task import Task
+import os
+import sys
+
+# HACK! I still want mkrootfs to run w/o a real package.
+sys.path.append(os.path.dirname(__file__))
+import mkrootfs
 
 rtems_version = "7"
 
@@ -210,3 +217,46 @@ def has_lib(conf, libs: list[str]) -> bool:
     except:
         return False
     return True
+
+def add_rootfs(bld, dir: str, file: str = 'rootfs.S', macros: dict = {}, tarball: bool = True):
+    """
+    Adds a directory as the rootfs. This directory should contain a rootfs.txt file
+    describing the files to be installed, their destination, permissions, ownership, etc.
+
+    Operates in two modes: tarball and custom. 'Custom' mode effectively embeds each
+    file individually and generates the code needed to write them out with proper permissions.
+    Tarball does what it says on the tin. Intended to be used with RTEMS's built-in tarfs
+    system.
+    
+    This will generate a source file with the embedded data.
+
+    Parameters
+    ----------
+    bld :
+        Build context
+    dir : str
+        Directory that contains the rootfs.txt
+    file : str
+        Name of the generated file
+    macros : dict
+        Dict defining macros and their corresponding values. rootfs.txt will be processed with
+        these using string.Template
+    tarball : bool
+        When true, generate an embedded tarball, otherwise use the other method
+    """
+    
+    def generate(task):
+        bld.to_log(f'Generating {file}')
+        if tarball:
+            mkrootfs.generate_tarball(os.path.dirname(task.inputs[0].abspath()),
+                                      task.outputs[0].abspath(), macros)
+        else:
+            mkrootfs.generate_source(os.path.dirname(task.inputs[0].abspath()),
+                                     task.outputs[0].abspath(), macros)
+
+    bld(
+        name=file,
+        target=f'{bld.out_dir}/{file}',
+        #source=[f'{dir}/rootfs.txt'],
+        rule=generate
+    )
