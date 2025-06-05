@@ -15,11 +15,7 @@
 
 import argparse
 import os
-import sys
-import tempfile
 import subprocess
-import regex
-import configparser
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-l', action='append', help='Library to search in')
