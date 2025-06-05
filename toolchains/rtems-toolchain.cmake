@@ -77,6 +77,14 @@ set(RTEMS_BSP_DIR "${RTEMS_TOP}/target/${RTEMS_SUBDIR}/${RTEMS_ARCH}-rtems${RTEM
 set(RTEMS_BSP_HOST_DIR "${RTEMS_TOP}/host/${HOST_DIR}/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}")
 
 #
+# Install prefix
+#
+if (DEFINED RTEMS_INSTALL_TOP)
+    set(CMAKE_INSTALL_PREFIX "${RTEMS_INSTALL_TOP}/target/${RTEMS_SUBDIR}/${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}/${RTEMS_BSP}")
+    message("CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+endif()
+
+#
 # BSP specific compiler flags
 #
 set(RTEMS_BSP_INCDIR "${RTEMS_BSP_DIR}/lib/include")
