@@ -138,9 +138,11 @@ function(rtems_add_object TARGET BASE_TARGET)
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
         COMMAND "${CMAKE_RTEMS_LD}" -O elf -e rtemsEntryPoint -b "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
-            -L "${RTEMS_BSP_DIR}/lib" -r "${RTEMS_TOP}/target/rtems" -B "${RTEMS_ARCH}/${RTEMS_BSP}"
+            -L "${RTEMS_BSP_DIR}/lib" -r "${RTEMS_TOP}/target/rtems"
+            -C "${CMAKE_C_COMPILER}"
             -L "${CMAKE_BINARY_DIR}" -o "${CMAKE_BINARY_DIR}/${TARGET}.obj"
             $<TARGET_OBJECTS:${TARGET}>
+            -lrtemsbsp -lrtemscpu
         DEPENDS "${TARGET}" "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
         COMMAND_EXPAND_LISTS
     )
