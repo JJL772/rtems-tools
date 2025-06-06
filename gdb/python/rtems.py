@@ -40,7 +40,11 @@ WAIT_CLASS = {
     0x800: "THREAD_WAIT_CLASS_PERIOD",
 }
 
-def _thr_state_name(self, state: int) -> str:
+OBJECT_CLASSES = {
+
+}
+
+def _thr_state_name(state: int) -> str:
     """
     Convert a thread state to its associated name
     
@@ -54,7 +58,7 @@ def _thr_state_name(self, state: int) -> str:
     except:
         return f'Invalid ({state})'
         
-def _wait_class_flags(self, cls: int) -> list[str]:
+def _wait_class_flags(cls: int) -> list[str]:
     """
     Converts the wait class of a thread into a list of named flags
 
@@ -68,7 +72,7 @@ def _wait_class_flags(self, cls: int) -> list[str]:
         if cls & k: l.append(v)
     return l
 
-def _decode_name(self, name: int) -> str:
+def _decode_name(name: int) -> str:
     """
     Decodes a name into a printable string
     """
@@ -77,6 +81,12 @@ def _decode_name(self, name: int) -> str:
             (name>>8 ) & 0xFF,
             (name>>0 ) & 0xFF]
     return ''.join([chr(x) for x in chrs if x != 0])
+
+def _object_class(id: int):
+    """
+    Extract object class from objects id
+    """
+    return (id >> 27) & 0x1F
 
 class RtemsTasksCommand(gdb.Command):
     """
@@ -96,19 +106,54 @@ class RtemsTasksCommand(gdb.Command):
             # Cast to thread control structure
             ctrl = obj.cast(gdb.lookup_type('Thread_Control').pointer())
 
-            name = self._decode_name(obj['name']['name_u32'])
+            # Instruction pointer is on the top of the stack
+            reg = ctrl['Registers']['esp']
+            pc = reg.cast(gdb.lookup_type('uint32_t').pointer()).dereference() if int(reg) != 0 else 0
+
+            name = _decode_name(obj['name']['name_u32'])
             print(f'{name} -->')
-            print(f'  State: {self._state_name(int(ctrl["current_state"]))}')
+            print(f'  State: {_thr_state_name(int(ctrl["current_state"]))}')
             print(f'  Wait State:')
-            print(f'    Class: {", ".join(self._wait_class_flags(ctrl["Wait"]["flags"]))}')
-            print(f'  {obj["Node"]["next"]}')
-            if obj['Node']['next'] == 0 or i > 32:
+            print(f'    Class: {", ".join(_wait_class_flags(ctrl["Wait"]["flags"]))}')
+            print(f'  PC: {hex(pc)}')
+            if int(obj['Node']['next']) == 0 or i > 128:
                 break
             i += 1
     
     def invoke(self, argument, from_tty):
         self._iterate_tasks()
-        
+
+
+class RtemsSemaphoresCommand(gdb.Command):
+    def __init__(self):
+        super().__init__('rtems sem', gdb.COMMAND_USER)
+    
+    def _iterate_sems(self, locked_only: bool):
+        # Head node
+        node = gdb.parse_and_eval('_Semaphore_Objects[0]')
+        while True:
+            # Grab the core control union
+            ctrl = node['Core_control']
+            # Grab the wait queue. This is at the same offset for all types in the union
+            wait_q = ctrl['Semaphore']['Wait_queue']['Queue']
+
+            is_locked = wait_q['owner'] != 0
+
+            if locked_only and is_locked or not locked_only:
+                name = _decode_name(int(node["Object"]["name"]["name_u32"]))
+                print(f'{name if len(name) else '<unnamed>'} -->')
+                print(f'  Status: {"Locked" if is_locked else "Unlocked"}')
+                if is_locked:
+                    print(f'    Owner: {wait_q["owner"].cast(gdb.lookup_type('Thread_Control').pointer())}')
+
+            # Next node
+            next = node['Object']['Node']['next']
+            if int(next) == 0: break
+            node = next.cast(gdb.lookup_type('Semaphore_Control').pointer())
+
+    def invoke(self, arg, from_tty):
+        self._iterate_sems(arg=='locked')
 
 RtemsCommand()
 RtemsTasksCommand()
+RtemsSemaphoresCommand()
