@@ -96,7 +96,7 @@ function(rtems_add_executable TARGET)
         "${TARGET}-boot" ALL
         DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.boot"
     )
-    
+
     add_custom_target(
         "${TARGET}-obj" ALL
         DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
@@ -106,7 +106,7 @@ function(rtems_add_executable TARGET)
     if (SHARED_PREFIX)
         install(
             TARGETS "${TARGET}"
-            
+
             RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/RTEMS-${RTEMS_BSP}"
             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/RTEMS-${RTEMS_BSP}"
             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/RTEMS-${RTEMS_BSP}"
@@ -185,6 +185,32 @@ function(rtems_add_rootfs TARGET DIR TYPE)
     # Add rootfs sources to target
     target_sources(
         ${TARGET} PRIVATE "${CMAKE_BINARY_DIR}/${TARGET}-rootfs.S"
+    )
+endfunction()
+
+# Compiles a dtb file and includes it into the target.
+# Summary of args:
+#  - TARGET: String; Name of the target
+#  - FILE: String; Path to the DTS file
+function(rtems_add_dts TARGET FILE)
+    get_filename_component(DTS_FILE "${FILE}" ABSOLUTE)
+
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-fdt.dtb"
+        COMMAND "${CMAKE_DTC}" -@ -I dts -O dtb -o "${CMAKE_BINARY_DIR}/${TARGET}-fdt.dtb" "${DTS_FILE}"
+    )
+
+    add_custom_command(
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}-fdt.dtb"
+        COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../bin2as.py"
+            -i "${CMAKE_BINARY_DIR}/${TARGET}-fdt.dtb"
+            -o "${CMAKE_BINARY_DIR}/${TARGET}-fdt.S"
+            -v "system_dtb"
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-fdt.S"
+    )
+
+    target_sources(
+        ${TARGET} PRIVATE "${CMAKE_BINARY_DIR}/${TARGET}-fdt.S"
     )
 endfunction()
 
