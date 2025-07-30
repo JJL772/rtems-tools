@@ -54,7 +54,7 @@ if [ -z "$IP" ]; then
     IP="localhost:1234"
 fi
 
-ARGS="-ex \"target remote $IP\" -ex \"source $RTEMS_TOP/src/rtems-tools/tools/gdb/python/__init__.py\" "
+ARGS="-ex \"target remote $IP\" "
 
 # Exec the arm crash handler script
 if [ "$ARCH" = "arm" ]; then
@@ -68,11 +68,19 @@ if [ ! -z "$SYMFILE" ]; then
     ARGS="-ex \"set auto-load safe-path /\" -ex \"symbol-file $SYMFILE\" -ex \"b bsp_fatal_extension\" $ARGS"
 fi
 
-if [ ! -d "$TOP/../host/linux-x86_64" ]; then
-    TOP="$RTEMS_TOP/tools"
+HBIN="$RTEMS_TOP/host/linux-x86_64/bin"
+
+# Lame attempt at automatically detecting RTEMS version
+if [ -f "$HBIN/$ARCH-rtems6-gdb" ]; then
+    HBIN="$HBIN/$ARCH-rtems6-gdb"
+elif [ -f "$HBIN/$ARCH-rtems7-gdb" ]; then
+    HBIN="$HBIN/$ARCH-rtems7-gdb"
+else
+    echo "Unable to find GDB. Tried $ARCH-rtems6-gdb and $ARCH-rtems7-gdb"
+    exit 1
 fi
 
-CMD="\"$TOP/../host/linux-x86_64/bin/$ARCH-rtems6-gdb\" $ARGS"
+CMD="\"$HBIN\" $ARGS"
 
 echo $CMD
 eval $CMD
