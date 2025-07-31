@@ -3,7 +3,6 @@
 # Script to generate a "rootfs" from a directory
 
 import argparse
-import configparser
 import os
 import sys
 import string
