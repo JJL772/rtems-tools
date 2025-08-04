@@ -51,27 +51,48 @@ function(rtems_add_executable TARGET)
         ${TARGET} "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c" ${ARGN}
     )
 
-    # Generate a loadable symbols object
-    add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
-        COMMAND "${CMAKE_RTEMS_SYMS}" -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}" -o "${TARGET}.obj" "${CMAKE_BINARY_DIR}/${TARGET}"
-        DEPENDS "${TARGET}"
-        COMMENT "Generating loadable symbols"
-    )
+    # Legacy CEXP path. Uses xsyms to generate a symbol list for use with Cexpsh.
+    if (USE_CEXP)
+        # Generate a symbols list off of the existing binary
+        add_custom_command(
+            OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
+            COMMAND "${CMAKE_BINARY_DIR}/xsyms" -C
+                "${CMAKE_BINARY_DIR}/${TARGET}"
+                "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
+            DEPENDS "${TARGET}" "${CMAKE_BINARY_DIR}/xsyms"
+            COMMENT "Generating symbols list with xsyms"
+        )
 
-    # Gather symbols off of the executable
-    add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
-        COMMAND "${CMAKE_RTEMS_SYMS}" -e -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}"
-            -m "${CMAKE_BINARY_DIR}/${TARGET}.map" -o "${CMAKE_BINARY_DIR}/${TARGET}-intr.o" "${CMAKE_BINARY_DIR}/${TARGET}"
-        DEPENDS "${TARGET}"
-        COMMENT "Generating list of embedded symbols"
-    )
+        # Generate the stage 2 exe with embedded symbol table
+        add_executable(
+            "${TARGET}-exe" $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
+        )
 
-    # Generate a stage 2 exe with embedded symbol table
-    add_executable(
-        ${TARGET}-exe $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
-    )
+    else()
+        # RTEMS RTL path. Uses rtems-syms to generate and embed a list of symbols
+
+        # Generate a loadable symbols object
+        add_custom_command(
+            OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+            COMMAND "${CMAKE_RTEMS_SYMS}" -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}" -o "${TARGET}.obj" "${CMAKE_BINARY_DIR}/${TARGET}"
+            DEPENDS "${TARGET}"
+            COMMENT "Generating loadable symbols"
+        )
+
+        # Gather symbols off of the executable
+        add_custom_command(
+            OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
+            COMMAND "${CMAKE_RTEMS_SYMS}" -e -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}"
+                -m "${CMAKE_BINARY_DIR}/${TARGET}.map" -o "${CMAKE_BINARY_DIR}/${TARGET}-intr.o" "${CMAKE_BINARY_DIR}/${TARGET}"
+            DEPENDS "${TARGET}"
+            COMMENT "Generating list of embedded symbols"
+        )
+
+        # Generate a stage 2 exe with embedded symbol table
+        add_executable(
+            ${TARGET}-exe $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
+        )
+    endif()
 
     # Link against the same libraries as stage 1 executable
     target_link_libraries(
