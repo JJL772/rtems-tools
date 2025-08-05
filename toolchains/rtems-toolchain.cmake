@@ -93,7 +93,7 @@ endif()
 #
 set(RTEMS_BSP_INCDIR "${RTEMS_BSP_DIR}/lib/include")
 set(RTEMS_CFLAGS "${RTEMS_BSP_CFLAGS} -DBSP_${RTEMS_BSP}=1 -ffunction-sections -fdata-sections -O2 -g -isystem${RTEMS_BSP_INCDIR}")
-set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -B${RTEMS_BSP_DIR}/lib -qrtems -Wl,--gc-sections")
+set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -B${RTEMS_BSP_DIR}/lib -qrtems")
 
 if ("${RTEMS_MAJOR}" STREQUAL "4")
     set(RTEMS_LDFLAGS "${RTEMS_LDFLAGS} -specs bsp_specs")
@@ -101,6 +101,6 @@ endif()
 
 set(CMAKE_C_FLAGS "${RTEMS_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${RTEMS_CFLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS "${RTEMS_LDFLAGS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${RTEMS_LDFLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${RTEMS_LDFLAGS} ${RTEMS_EXE_BSP_LDFLAGS} -Wl,--gc-sections")
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--undefined -Wl,-r -nostdlib")
 set(CMAKE_MODULE_LINKER_FLAGS "${RTEMS_LDFLAGS}")

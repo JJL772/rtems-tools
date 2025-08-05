@@ -8,6 +8,8 @@
 
 include(GNUInstallDirs)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 # Helper command to add an ELF executable and generate a bootable image from it
 function(rtems_add_executable TARGET)
     # A quick rundown on what's happening here:
@@ -156,12 +158,42 @@ function(rtems_add_object TARGET BASE_TARGET)
         ${ARGN}
     )
 
+    # Generate a normal ELF file that can be used with either Cexp or RTL loaders
+    add_library(
+        ${TARGET}-elf SHARED ${ARGN}
+    )
+
+    # Undefined symbols are totally valid in our ELF objects
+    target_link_options(
+        ${TARGET}-elf PRIVATE -Wl,--undefined
+    )
+
+    # For Cexpsh ELF objects, we must avoid generating sections for each function and piece of data
+    # Cexpsh also doesn't support IP relative relocations
+    target_compile_options(
+        ${TARGET}-elf PRIVATE -fno-data-sections -fno-function-sections -fno-pic
+    )
+
+    # Tweak the name to a <TARGET>.obj
+    set_target_properties(
+        ${TARGET}-elf
+        PROPERTIES
+            LIBRARY_OUTPUT_NAME "${TARGET}"
+            RUNTIME_OUTPUT_NAME "${TARGET}"
+            SUFFIX ".obj"
+            PREFIX ""
+    )
+
     add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
-        COMMAND "${CMAKE_RTEMS_LD}" -O elf -e rtemsEntryPoint -b "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
-            -L "${RTEMS_BSP_DIR}/lib" -r "${RTEMS_TOP}/target/rtems"
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.rap"
+        COMMAND "${CMAKE_RTEMS_LD}"
+            -O elf -e rtemsEntryPoint
+            -b "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
+            -L "${RTEMS_BSP_DIR}/lib"
+            -r "${RTEMS_TOP}/target/rtems"
             -C "${CMAKE_C_COMPILER}"
-            -L "${CMAKE_BINARY_DIR}" -o "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+            -L "${CMAKE_BINARY_DIR}"
+            -o "${CMAKE_BINARY_DIR}/${TARGET}.rap"
             $<TARGET_OBJECTS:${TARGET}>
             -lrtemsbsp -lrtemscpu
         DEPENDS "${TARGET}" "${CMAKE_BINARY_DIR}/${BASE_TARGET}.exe"
@@ -170,10 +202,16 @@ function(rtems_add_object TARGET BASE_TARGET)
 
     add_custom_target(
         "${TARGET}-obj" ALL
-        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.rap"
     )
 
-    # Install the resutling loadable object
+    # Install the resutling loadable RTL object
+    install(
+        FILES "${CMAKE_BINARY_DIR}/${TARGET}.rap"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+
+    # Install the loadable ELF
     install(
         FILES "${CMAKE_BINARY_DIR}/${TARGET}.obj"
         DESTINATION "${CMAKE_INSTALL_BINDIR}"
