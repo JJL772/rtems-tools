@@ -51,16 +51,16 @@ function(rtems_add_executable TARGET)
         ${TARGET} "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c" ${ARGN}
     )
 
-    # Legacy CEXP path. Uses xsyms to generate a symbol list for use with Cexpsh.
+    # Legacy CEXP path. Uses rtems-xsyms to generate a symbol list for use with Cexpsh.
     if (USE_CEXP)
         # Generate a symbols list off of the existing binary
         add_custom_command(
             OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
-            COMMAND "${CMAKE_BINARY_DIR}/xsyms" -C
+            COMMAND "${CMAKE_RTEMS_XSYMS}" -C
                 "${CMAKE_BINARY_DIR}/${TARGET}"
                 "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
-            DEPENDS "${TARGET}" "${CMAKE_BINARY_DIR}/xsyms"
-            COMMENT "Generating symbols list with xsyms"
+            DEPENDS "${TARGET}"
+            COMMENT "Generating symbols list with rtems-xsyms"
         )
 
         # Generate the stage 2 exe with embedded symbol table
