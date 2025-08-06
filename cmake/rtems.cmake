@@ -53,6 +53,12 @@ function(rtems_add_executable TARGET)
         ${TARGET} "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c" ${ARGN}
     )
 
+    # Set linker flags
+    separate_arguments(RTEMS_EXE_LDFLAGS)
+    target_link_options(
+        ${TARGET} PRIVATE ${RTEMS_EXE_LDFLAGS}
+    )
+
     # Legacy CEXP path. Uses rtems-xsyms to generate a symbol list for use with Cexpsh.
     if (USE_CEXP)
         # Generate a symbols list off of the existing binary
@@ -107,6 +113,12 @@ function(rtems_add_executable TARGET)
             OUTPUT_NAME ${TARGET}.exe
     )
 
+    # Set the same linker flags
+    separate_arguments(RTEMS_EXE_LDFLAGS)
+    target_link_options(
+        ${TARGET}-exe PRIVATE ${RTEMS_EXE_LDFLAGS}
+    )
+
     # Generate a flat binary file that can be directly booted
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.boot"
@@ -159,19 +171,14 @@ function(rtems_add_object TARGET BASE_TARGET)
     )
 
     # Generate a normal ELF file that can be used with either Cexp or RTL loaders
-    add_library(
-        ${TARGET}-elf SHARED ${ARGN}
+    add_executable(
+        ${TARGET}-elf ${ARGN}
     )
 
-    # Undefined symbols are totally valid in our ELF objects
+    # Set module linker flags
+    separate_arguments(RTEMS_MODULE_LDFLAGS)
     target_link_options(
-        ${TARGET}-elf PRIVATE -Wl,--undefined
-    )
-
-    # For Cexpsh ELF objects, we must avoid generating sections for each function and piece of data
-    # Cexpsh also doesn't support IP relative relocations
-    target_compile_options(
-        ${TARGET}-elf PRIVATE -fno-data-sections -fno-function-sections -fno-pic
+        ${TARGET}-elf PRIVATE "${RTEMS_MODULE_LDFLAGS}"
     )
 
     # Tweak the name to a <TARGET>.obj
