@@ -10,6 +10,20 @@ include(GNUInstallDirs)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
+# Helper command to add a simple executable for RTEMS
+# Handles linking of critical components and incorporation of 
+function(rtems_add_simple_executable TARGET)
+    add_executable(
+        ${TARGET} ${ARGN}
+    )
+
+    # Set linker flags
+    separate_arguments(RTEMS_EXE_LDFLAGS)
+    target_link_options(
+        ${TARGET} PRIVATE ${RTEMS_EXE_LDFLAGS}
+    )
+endfunction()
+
 # Helper command to add an ELF executable and generate a bootable image from it
 function(rtems_add_executable TARGET)
     # A quick rundown on what's happening here:

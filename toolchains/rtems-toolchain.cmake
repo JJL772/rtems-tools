@@ -98,7 +98,7 @@ set(RTEMS_EXE_LDFLAGS "${RTEMS_LDFLAGS} ${RTEMS_EXE_BSP_LDFLAGS} -Wl,--gc-sectio
 set(RTEMS_MODULE_LDFLAGS "${RTEMS_LDFLAGS} -Wl,--undefined -r")
 
 if ("${RTEMS_MAJOR}" STREQUAL "4")
-    set(RTEMS_LDFLAGS "${RTEMS_LDFLAGS} -specs bsp_specs")
+    set(RTEMS_LDFLAGS "${RTEMS_LDFLAGS} -specs bsp_specs -qrtems")
 endif()
 
 set(CMAKE_C_FLAGS "${RTEMS_CFLAGS}")
