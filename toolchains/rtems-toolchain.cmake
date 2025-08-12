@@ -95,7 +95,7 @@ set(RTEMS_BSP_INCDIR "${RTEMS_BSP_DIR}/lib/include")
 set(RTEMS_CFLAGS "${RTEMS_BSP_CFLAGS} -DBSP_${RTEMS_BSP}=1 -ffunction-sections -fdata-sections -O2 -g -isystem${RTEMS_BSP_INCDIR}")
 set(RTEMS_LDFLAGS "${RTEMS_BSP_LDFLAGS} -B${RTEMS_BSP_DIR}/lib")
 set(RTEMS_EXE_LDFLAGS "${RTEMS_LDFLAGS} ${RTEMS_EXE_BSP_LDFLAGS} -Wl,--gc-sections -B${RTEMS_BSP_DIR}/lib -qrtems")
-set(RTEMS_MODULE_LDFLAGS "${RTEMS_LDFLAGS} -Wl,--undefined -r")
+set(RTEMS_MODULE_LDFLAGS "${RTEMS_LDFLAGS} -r -nostdlib")
 
 if ("${RTEMS_MAJOR}" STREQUAL "4")
     set(RTEMS_LDFLAGS "${RTEMS_LDFLAGS} -specs bsp_specs -qrtems")
