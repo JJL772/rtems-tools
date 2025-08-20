@@ -240,8 +240,57 @@ function(rtems_add_object TARGET BASE_TARGET)
 
 endfunction()
 
+# Helper function to incorporate additional libraries into the specified executable
+# Parameters:
+#   TARGET  : Name of the target
+#   LIBS    : List of libraries to get symbols from
+#   LIBDIRS : List of library search directories
+function(rtems_include_libs)
+    # Parse the args
+    cmake_parse_arguments(
+        arg
+        ""
+        "TARGET"
+        "LIBS;LIBDIRS"
+        ${ARGN}
+    )
+
+    list(TRANSFORM arg_LIBS PREPEND "-l")
+    list(TRANSFORM arg_LIBDIRS PREPEND "-L")
+
+    # Generate a list of symbol refs
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+        COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
+            -o "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+            -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}"
+            -N "__symbolRefIncLibs"
+            ${arg_LIBDIRS}
+            ${arg_LIBS}
+        COMMENT "Generating additional symbol refs for included libraries"
+        COMMAND_EXPAND_LISTS
+    )
+
+    # Add the sources to the target. These must be added to the 1st stage target
+    # so that xsyms (or rtems-ld) can generate a symbol table including them.
+    target_sources(
+        "${arg_TARGET}" PRIVATE
+        "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+    )
+    
+    # Force linker to emit symbols
+    set_target_properties(
+        "${arg_TARGET}" "${arg_TARGET}-exe" PROPERTIES 
+            LINK_FLAGS "-Wl,-u __symbolRefIncLibs"
+    )
+endfunction()
+
 # Helper function to add and generate a rootfs.
 # This will automatically add the rootfs.c file to your target. call rootfs_unpack() to unpack at runtime
+# Parameters:
+#   TARGET  : Name of the target
+#   DIR     : Directory of the rootfs, must contain a rootfs.txt
+#   TYPE    : rootfs type, either tar or builtin
 function(rtems_add_rootfs TARGET DIR TYPE)
     enable_language(ASM)
 
