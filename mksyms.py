@@ -15,18 +15,25 @@
 
 import argparse
 import os
+import sys
 import subprocess
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-l', action='append', help='Library to search in')
-parser.add_argument('-L', action='append', help='Additional library search paths')
-parser.add_argument('-f', type=str, help='Base image')
-parser.add_argument('-m', type=str, help='Difference mapping')
+parser.add_argument('-l', metavar='lib', action='append', help='Library to search in')
+parser.add_argument('-L', metavar='dir', action='append', help='Additional library search paths')
+parser.add_argument('-f', metavar='file', type=str, help='Base image')
+parser.add_argument('-m', metavar='file', type=str, help='Difference mapping')
 parser.add_argument('-v', action='store_true', help='Verbose')
-parser.add_argument('-C', type=str, default='', help='Compiler prefix (i.e. powerpc-rtems6 for powerpc-rtems6-gcc)')
-parser.add_argument('-o', type=str, required=True, help='Output C source file')
-parser.add_argument('-g', type=str, help='File containing a list of exclude filters')
-parser.add_argument('-r', type=str, help='List of additional symbols to reference')
+parser.add_argument('-C', type=str, metavar='prefix', default='', help='Compiler prefix (i.e. powerpc-rtems6 for powerpc-rtems6-gcc)')
+parser.add_argument('-o', type=str, metavar='file', required=True, help='Output C source file')
+parser.add_argument('-g', type=str, metavar='file', help='File containing a list of exclude filters')
+parser.add_argument('-r', type=str, metavar='syms', help='List of additional symbols to reference')
+parser.add_argument('-N', type=str, metavar='name', default='__symbolRefDummy', help='Name of the function to output, defaults to __symbolRefDummy')
+
+# Default symbols to skip
+DEFAULT_FILTERS = set([
+    'GNU-stack'
+])
 
 def _get_tool_name(pfx: str, tool: str) -> str:
     """
@@ -55,6 +62,26 @@ def _get_syms(cmd: str, file: str) -> set[str]:
         raise RuntimeError(f'Error while reading {file}: {r.stdout}')
     return set(r.stdout.splitlines())
 
+def _get_syms_readelf(cmd: str, file: str, skip_tls: bool = True) -> set[str]:
+    """
+    Obtains a set of symbols from the file using readelf
+    """
+    r = subprocess.run([cmd, '-s', '-W', file], capture_output=True, universal_newlines=True)
+    if r.returncode != 0:
+        raise RuntimeError(f'Error while reading {file}: {r.stdout}')
+    lines = r.stdout.splitlines()
+    result = set()
+    for l in lines:
+        # columns: num addr size type bind visibility ndx name (we only care about name and type)
+        cols = l.split()
+        if len(cols) != 8: continue
+        # Skip tls symbols if requested
+        if cols[3] == 'TLS' and skip_tls: continue
+        # Skip sections, files
+        if cols[3] in ['SECTION', 'FILE']: continue
+        result.add(cols[7])
+    return result
+
 def _find_lib(paths: list[str], lib: str) -> str | None:
     """
     Tries to find a library based on the provided library search paths
@@ -64,26 +91,35 @@ def _find_lib(paths: list[str], lib: str) -> str | None:
             return f'{p}/lib{lib}.a'
     return None
 
-def _gen_refs(file: str, syms: set):
+def _gen_refs(funcname: str, file: str, syms: set):
     """
     Generate a C source file that contains a huge list of symbol refs
     """
     with open(file, 'w') as fp:
-        fp.write('/** WARNING: Generated symbol ref file, do not edit! **/\n\n')
+        fp.write(
+f"""
+/**
+ * WARNING: Generated file! Do not edit!
+ * Generated with '{" ".join(sys.argv)}'
+ */
+"""
+        )
         num = 0
         for sym in syms:
             fp.write(f'asm(".set __symref_alias_{num},{sym}\\n");\n')
             fp.write(f'extern void* __symref_alias_{num};\n')
             num += 1
-        fp.write('void __symbolRefDummy() {static int n = 0; n++;\n')
+        fp.write('\n#pragma GCC push_options\n#pragma GCC optimize("O0")\n')
+        fp.write(f'void __attribute__((used)) {funcname}() {{\n')
         num = 0
         for sym in syms:
             # This is getting annoying. GCC is WAYYYYYYYYYYY TOO aggressive with the symbol removal.
             # Like seriously. I'm *telling you* to emit a reference, very explicitly. Please do it!
             # Do you really expect me to add --undefine ... on the command line for EVERY symbol??? really?
-            fp.write(f'__symref_alias_{num} = (n % 2) ? __symref_alias_{num} : 0;\n')
+            fp.write(f'__symref_alias_{num} = __symref_alias_{num};\n')
             num += 1
-        fp.write('\n}')
+        fp.write('}\n')
+        fp.write('#pragma GCC pop_options\n')
 
 def _load_list_file(file: str) -> set[str]:
     """
@@ -104,11 +140,12 @@ def main():
     
     COMPILER = _get_tool_name(args.C, 'g++')
     NM = _get_tool_name(args.C, 'nm')
+    READELF = _get_tool_name(args.C, 'readelf')
 
     if args.v:
         print(_get_compiler_lib_paths(_get_tool_name(args.C, 'g++')))
 
-    filters = set()
+    filters = DEFAULT_FILTERS
     if args.g is not None:
         filters = _load_list_file(args.g)
     
@@ -126,7 +163,7 @@ def main():
 
     # Generate base image symbols
     if args.f is not None:
-        base_syms = _get_syms(NM, args.f)
+        base_syms = _get_syms_readelf(READELF, args.f)
 
     # Generate list of library symbols
     for a in LIBS:
@@ -134,7 +171,7 @@ def main():
         if l is None:
             print(f'Failed to find -l{a}')
             exit(1)
-        libsyms[a] = _get_syms(NM, l)
+        libsyms[a] = _get_syms_readelf(READELF, l)
 
     diff_syms = set()
 
@@ -149,7 +186,7 @@ def main():
     diff_syms = diff_syms.union(extra)
 
     # Generate a list of dummy symbol refs
-    _gen_refs(args.o, diff_syms)
+    _gen_refs(args.N, args.o, diff_syms)
 
     if args.v:
         print(diff_syms)
