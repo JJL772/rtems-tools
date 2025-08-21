@@ -146,10 +146,10 @@ function(rtems_add_executable TARGET)
         DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.boot"
     )
 
-    add_custom_target(
-        "${TARGET}-obj" ALL
-        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
-    )
+    #add_custom_target(
+    #    "${TARGET}-obj" ALL
+    #    DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.obj"
+    #)
 
     # Install to an EPICS-style "shared" prefix
     if (SHARED_PREFIX)
@@ -249,7 +249,7 @@ function(rtems_include_libs)
     # Parse the args
     cmake_parse_arguments(
         arg
-        ""
+        "LDEP"
         "TARGET"
         "LIBS;LIBDIRS"
         ${ARGN}
@@ -258,31 +258,90 @@ function(rtems_include_libs)
     list(TRANSFORM arg_LIBS PREPEND "-l")
     list(TRANSFORM arg_LIBDIRS PREPEND "-L")
 
-    # Generate a list of symbol refs
-    add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
-        COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
-            -o "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
-            -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}"
-            -N "__symbolRefIncLibs"
-            ${arg_LIBDIRS}
-            ${arg_LIBS}
-        COMMENT "Generating additional symbol refs for included libraries"
-        COMMAND_EXPAND_LISTS
-    )
+    if (NOT arg_LDEP)
+        # Generate a list of symbol refs
+        add_custom_command(
+            OUTPUT "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
+            COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
+                -o "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
+                -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}"
+                -N "__symbolRefIncLibs"
+                -T "linker"
+                -L "${RTEMS_BSP_DIR}/lib"
+                -L "${CMAKE_BINARY_DIR}"
+                -g "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/${RTEMS_ARCH}-filt.sym"
+                -g "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base-filt.sym"
+                ${arg_LIBDIRS}
+                ${arg_LIBS}
+            COMMENT "Generating additional symbol refs for included libraries"
+            COMMAND_EXPAND_LISTS
+        )
 
-    # Add the sources to the target. These must be added to the 1st stage target
-    # so that xsyms (or rtems-ld) can generate a symbol table including them.
-    target_sources(
-        "${arg_TARGET}" PRIVATE
-        "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
-    )
-    
-    # Force linker to emit symbols
-    set_target_properties(
-        "${arg_TARGET}" "${arg_TARGET}-exe" PROPERTIES 
-            LINK_FLAGS "-Wl,-u __symbolRefIncLibs"
-    )
+        add_custom_target(
+            "${arg_TARGET}-inc-syms-lds"
+            DEPENDS "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
+        )
+
+        add_dependencies(
+            "${arg_TARGET}" "${arg_TARGET}-inc-syms-lds"
+        )
+
+        # Add the sources to the target. These must be added to the 1st stage target
+        # so that xsyms (or rtems-ld) can generate a symbol table including them.
+        #target_sources(
+        #    "${arg_TARGET}" PRIVATE
+        #    "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+        #)
+        
+        # Force linker to emit symbols
+        #set_target_properties(
+        #    "${arg_TARGET}" "${arg_TARGET}-exe" PROPERTIES 
+        #        LINK_FLAGS "-Wl,-u __symbolRefIncLibs"
+        #)
+
+        target_link_options(
+            "${arg_TARGET}" PRIVATE
+            "-Wl,-T${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
+        )
+
+        target_link_options(
+            "${arg_TARGET}-exe" PRIVATE
+            "-Wl,-T${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
+        )
+    else()
+        # Generate using ldep
+        add_custom_command(
+            OUTPUT "${CMAKE_BINARY_DIR}/${arg_TARGET}.lds" "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+            COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../ldep.py"
+                -c "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+                -e "${CMAKE_BINARY_DIR}/${arg_TARGET}.lds"
+                -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}"
+                -O "${CMAKE_BINARY_DIR}"
+                -L "${RTEMS_BSP_DIR}/lib"
+                -L "${CMAKE_BINARY_DIR}"
+                ${arg_LIBDIRS}
+                ${arg_LIBS}
+            COMMENT "Generating additional symbol refs using ldep"
+            COMMAND_EXPAND_LISTS
+        )
+
+        # Add the sources to the target. These must be added to the 1st stage target
+        # so that xsyms (or rtems-ld) can generate a symbol table including them.
+        target_sources(
+            "${arg_TARGET}" PRIVATE
+            "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.c"
+        )
+
+        target_link_options(
+            "${arg_TARGET}" PRIVATE
+            "-Wl,-T${CMAKE_BINARY_DIR}/${arg_TARGET}.lds"
+        )
+
+        target_link_options(
+            "${arg_TARGET}-exe" PRIVATE
+            "-Wl,-T${CMAKE_BINARY_DIR}/${arg_TARGET}.lds"
+        )
+    endif()
 endfunction()
 
 # Helper function to add and generate a rootfs.

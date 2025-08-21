@@ -8,8 +8,8 @@
 # image. 
 # We want to create a "super" image for dynamic linking using the RTEMS RTL,
 # so that libraries like librtemsbsp.a, librtemscpu.a, etc. don't need to be
-# present on the file system at object load time. Due to linker elison, 
-# symbols from static libs are usually excluded unless a symbol in its 
+# present on the file system at object load time. Due to linker elison,
+# symbols from static libs are usually excluded unless a symbol in its
 # object file is directly referenced. These references can be done on the
 # command line using -u, or it can be done like it is here.
 
@@ -25,10 +25,12 @@ parser.add_argument('-f', metavar='file', type=str, help='Base image')
 parser.add_argument('-m', metavar='file', type=str, help='Difference mapping')
 parser.add_argument('-v', action='store_true', help='Verbose')
 parser.add_argument('-C', type=str, metavar='prefix', default='', help='Compiler prefix (i.e. powerpc-rtems6 for powerpc-rtems6-gcc)')
-parser.add_argument('-o', type=str, metavar='file', required=True, help='Output C source file')
-parser.add_argument('-g', type=str, metavar='file', help='File containing a list of exclude filters')
+parser.add_argument('-o', type=str, metavar='file', required=True, help='Output file')
+parser.add_argument('-T', choices=['c', 'linker'], default='c', help='Output type, either C or linker script')
+parser.add_argument('-g', type=str, metavar='file', nargs='+', help='File containing a list of exclude filters')
 parser.add_argument('-r', type=str, metavar='syms', help='List of additional symbols to reference')
 parser.add_argument('-N', type=str, metavar='name', default='__symbolRefDummy', help='Name of the function to output, defaults to __symbolRefDummy')
+parser.add_argument('--tls', action='store_true', help='Keep TLS symbols')
 
 # Default symbols to skip
 DEFAULT_FILTERS = set([
@@ -78,7 +80,9 @@ def _get_syms_readelf(cmd: str, file: str, skip_tls: bool = True) -> set[str]:
         # Skip tls symbols if requested
         if cols[3] == 'TLS' and skip_tls: continue
         # Skip sections, files
-        if cols[3] in ['SECTION', 'FILE']: continue
+        if cols[3] in ['SECTION', 'FILE', 'WEAK']: continue
+        # Skip undefined
+        if cols[6] == 'UND': continue
         result.add(cols[7])
     return result
 
@@ -91,7 +95,16 @@ def _find_lib(paths: list[str], lib: str) -> str | None:
             return f'{p}/lib{lib}.a'
     return None
 
-def _gen_refs(funcname: str, file: str, syms: set):
+def _gen_refs_lds(file: str, syms: set) -> bool:
+    """
+    Generate a linker script with a bunch of EXTERN() directives
+    """
+    with open(file, 'w') as fp:
+        for s in syms:
+            fp.write(f'EXTERN({s})\n')
+    return True
+
+def _gen_refs_c(funcname: str, file: str, syms: set):
     """
     Generate a C source file that contains a huge list of symbol refs
     """
@@ -113,9 +126,6 @@ f"""
         fp.write(f'void __attribute__((used)) {funcname}() {{\n')
         num = 0
         for sym in syms:
-            # This is getting annoying. GCC is WAYYYYYYYYYYY TOO aggressive with the symbol removal.
-            # Like seriously. I'm *telling you* to emit a reference, very explicitly. Please do it!
-            # Do you really expect me to add --undefine ... on the command line for EVERY symbol??? really?
             fp.write(f'__symref_alias_{num} = __symref_alias_{num};\n')
             num += 1
         fp.write('}\n')
@@ -137,7 +147,8 @@ def _load_list_file(file: str) -> set[str]:
 
 def main():
     args = parser.parse_args()
-    
+    keep_tls = True if args.tls else False
+
     COMPILER = _get_tool_name(args.C, 'g++')
     NM = _get_tool_name(args.C, 'nm')
     READELF = _get_tool_name(args.C, 'readelf')
@@ -145,10 +156,14 @@ def main():
     if args.v:
         print(_get_compiler_lib_paths(_get_tool_name(args.C, 'g++')))
 
+    # Gather list of filters
     filters = DEFAULT_FILTERS
     if args.g is not None:
-        filters = _load_list_file(args.g)
-    
+        for file in args.g:
+            filters = filters.union(_load_list_file(file))
+    print(filters)
+
+    # Gather list of additional symbol refs
     extra = set()
     if args.r is not None:
         extra = _load_list_file(args.r)
@@ -158,12 +173,12 @@ def main():
 
     LIBDIRS = [] if args.L is None else args.L
     LIBS = [] if args.l is None else args.l
-    
+
     LIBDIRS += _get_compiler_lib_paths(COMPILER)
 
     # Generate base image symbols
     if args.f is not None:
-        base_syms = _get_syms_readelf(READELF, args.f)
+        base_syms = _get_syms_readelf(READELF, args.f, keep_tls)
 
     # Generate list of library symbols
     for a in LIBS:
@@ -171,7 +186,7 @@ def main():
         if l is None:
             print(f'Failed to find -l{a}')
             exit(1)
-        libsyms[a] = _get_syms_readelf(READELF, l)
+        libsyms[a] = _get_syms_readelf(READELF, l, keep_tls)
 
     diff_syms = set()
 
@@ -186,7 +201,10 @@ def main():
     diff_syms = diff_syms.union(extra)
 
     # Generate a list of dummy symbol refs
-    _gen_refs(args.N, args.o, diff_syms)
+    if args.T == 'linker': 
+        _gen_refs_lds(args.o, diff_syms)
+    elif args.T == 'c':
+        _gen_refs_c(args.N, args.o, diff_syms)
 
     if args.v:
         print(diff_syms)
