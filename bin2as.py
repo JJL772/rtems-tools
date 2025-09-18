@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-
+#===========================================================================#
+# SYNOPSIS: bin2as.py
+#===========================================================================#
+# Converts a binary file to an assembly file that can be included in a build.
+# Uses the .incbin directive to link the data into the object with the best
+# possible performance.
 import os
 import argparse
 

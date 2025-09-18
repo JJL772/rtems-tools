@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-
+#===========================================================================#
+# SYNOPSIS: findlibs.py
+#===========================================================================#
+# Finds libraries in built-in compiler library paths, and explicit dirs
+# specified by -L
 import subprocess
 import argparse
 import os
