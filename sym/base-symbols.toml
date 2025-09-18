@@ -1,0 +1,45 @@
+[symbols]
+# Additional symbol refs
+ref = [
+    "sigaction",
+    "pthread_attr_setscope",
+    "pthread_attr_setschedpolicy",
+    "pthread_attr_getschedpolicy",
+    "pthread_attr_getschedparam",
+    "pthread_join",
+    "pthread_setschedparam",
+    "pthread_attr_setschedparam",
+    "pthread_detach",
+    "pthread_equal",
+    "pthread_key_delete",
+    "pthread_setname_np",
+    "pthread_mutexattr_settype",
+    "pthread_mutexattr_setprotocol",
+    "pthread_mutex_trylock",
+    "pthread_mutexattr_getprotocol",
+    "clock_getres",
+    "pathconf",
+    "truncate",
+    "utime",
+    "__dso_handle",
+    "unlinkat",
+    "_GLOBAL_OFFSET_TABLE_",
+    "rtems_message_queue_receive",
+    "pipe",
+    "mq_timedsend",
+    "mq_send",
+    "mq_receive",
+    "mq_close",
+    "mq_timedreceive",
+    "mq_open",
+    "mq_unlink",
+    "mq_getattr"
+]
+
+# These symbols cause problems during linking
+exclude = [
+    "towctrans_l",
+    "towctrans",
+    "_towctrans_r",
+    "_Stack_Allocator_allocate_for_idle_static",
+]

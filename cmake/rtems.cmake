@@ -57,9 +57,10 @@ function(rtems_add_executable TARGET)
         OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c"
         COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
             -o "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c"
-            -r "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base.sym"
+            -a "${RTEMS_ARCH}"
+            -c "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base-symbols.toml"
         COMMENT "Generating additional symbol refs"
-        DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base.sym"
+        DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base-symbols.toml"
     )
 
     # Generate base executable that will be used to feed rtems-syms
@@ -269,12 +270,14 @@ function(rtems_include_libs)
                 -T "linker"
                 -L "${RTEMS_BSP_DIR}/lib"
                 -L "${CMAKE_BINARY_DIR}"
-                -g "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/${RTEMS_ARCH}-filt.sym"
-                -g "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base-filt.sym"
+                -a "${RTEMS_ARCH}"
+                -c "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/obj-symbols.toml"
                 ${arg_LIBDIRS}
                 ${arg_LIBS}
             COMMENT "Generating additional symbol refs for included libraries"
             COMMAND_EXPAND_LISTS
+            DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/obj-symbols.toml"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
         )
 
         add_custom_target(

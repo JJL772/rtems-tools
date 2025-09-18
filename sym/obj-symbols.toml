@@ -1,0 +1,23 @@
+[symbols]
+exclude = [
+    "towctrans_l",
+    "towctrans",
+    "_towctrans_r",
+    "_Stack_Allocator_allocate_for_idle_static",
+]
+
+[symbols.powerpc]
+# Nothing yet
+
+[symbols.i386]
+exclude = [
+    "lrintl",
+    "rintl",
+    "llrintl",
+    "expl",
+    "ldexpl",
+    "logl",
+    "log10l",
+    "expl",
+    "_bsd_dwc_otg_driver",
+]

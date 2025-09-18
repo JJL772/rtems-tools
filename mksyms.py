@@ -17,6 +17,7 @@ import argparse
 import os
 import sys
 import subprocess
+import tomllib
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-l', metavar='lib', action='append', help='Library to search in')
@@ -30,12 +31,56 @@ parser.add_argument('-T', choices=['c', 'linker'], default='c', help='Output typ
 parser.add_argument('-g', type=str, metavar='file', nargs='+', help='File containing a list of exclude filters')
 parser.add_argument('-r', type=str, metavar='syms', help='List of additional symbols to reference')
 parser.add_argument('-N', type=str, metavar='name', default='__symbolRefDummy', help='Name of the function to output, defaults to __symbolRefDummy')
+parser.add_argument('-a', type=str, metavar='ARCH', required=True, help='Target architecture')
+parser.add_argument('-c', type=str, metavar='CONFIG', help='Path to a toml file to be used as a symbol config')
 parser.add_argument('--tls', action='store_true', help='Keep TLS symbols')
 
 # Default symbols to skip
 DEFAULT_FILTERS = set([
     'GNU-stack'
 ])
+
+def _parse_config(f: str, arch: str) -> tuple[set, set]:
+    """
+    Parses a symbol config in toml
+
+    Parameters
+    ----------
+    f : str
+        Name of the file to parse
+    arch : str
+        Target architecture
+
+    Returns
+    -------
+    tuple[list,list]
+        List of (refs, excludes)
+    """
+    cfg = {}
+    with open(f, 'rb') as fp:
+        cfg = tomllib.load(fp)
+
+    excludes = []
+    refs = []
+
+    def parse_section(cfg: dict) -> tuple[list, list]:
+        refs = []
+        excludes = []
+        if 'exclude' in cfg: excludes += cfg['exclude']
+        if 'ref' in cfg: refs += cfg['ref']
+        return (refs, excludes)
+
+    if 'symbols' in cfg:
+        r, e = parse_section(cfg['symbols'])
+        print(r)
+        refs += r
+        excludes += e
+    if f'symbols.{arch}' in cfg:
+        r, e = parse_section(cfg[f'symbols.{arch}'])
+        refs += r
+        excludes += e
+
+    return (set(refs), set(excludes))
 
 def _get_tool_name(pfx: str, tool: str) -> str:
     """
@@ -167,6 +212,14 @@ def main():
     extra = set()
     if args.r is not None:
         extra = _load_list_file(args.r)
+
+    # Load config if provided
+    if args.c is not None:
+        e, f = _parse_config(args.c, args.a)
+        extra.update(e)
+        filters.update(f)
+    print(f'Extra refs: {extra}')
+    print(f'Filters: {filters}')
 
     libsyms = {}
     base_syms = set()
