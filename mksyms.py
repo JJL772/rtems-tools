@@ -72,13 +72,12 @@ def _parse_config(f: str, arch: str) -> tuple[set, set]:
 
     if 'symbols' in cfg:
         r, e = parse_section(cfg['symbols'])
-        print(r)
         refs += r
         excludes += e
-    if f'symbols.{arch}' in cfg:
-        r, e = parse_section(cfg[f'symbols.{arch}'])
-        refs += r
-        excludes += e
+        if arch in cfg['symbols']:
+            r, e = parse_section(cfg['symbols'][arch])
+            refs += r
+            excludes += e
 
     return (set(refs), set(excludes))
 
@@ -112,6 +111,13 @@ def _get_syms(cmd: str, file: str) -> set[str]:
 def _get_syms_readelf(cmd: str, file: str, skip_tls: bool = True) -> set[str]:
     """
     Obtains a set of symbols from the file using readelf
+
+    Parameters
+    ----------
+    cmd : str
+        readelf command to run
+    file : str
+        
     """
     r = subprocess.run([cmd, '-s', '-W', file], capture_output=True, universal_newlines=True)
     if r.returncode != 0:
@@ -249,6 +255,9 @@ def main():
 
     # Diff with filters
     diff_syms = diff_syms.difference(filters)
+    for f in filters:
+        assert f not in diff_syms
+        assert f not in extra
     
     # Add in extra cross ref'ed symbols
     diff_syms = diff_syms.union(extra)
