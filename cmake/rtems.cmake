@@ -271,12 +271,12 @@ function(rtems_include_libs)
                 -L "${RTEMS_BSP_DIR}/lib"
                 -L "${CMAKE_BINARY_DIR}"
                 -a "${RTEMS_ARCH}"
-                -c "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/obj-symbols.toml"
+                -c "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base-symbols.toml"
                 ${arg_LIBDIRS}
                 ${arg_LIBS}
             COMMENT "Generating additional symbol refs for included libraries"
             COMMAND_EXPAND_LISTS
-            DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/obj-symbols.toml"
+            DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../sym/base-symbols.toml"
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
         )
 
