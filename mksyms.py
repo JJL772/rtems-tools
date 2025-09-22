@@ -155,9 +155,9 @@ def _get_syms_readelf(cmd: str, file: str, ignored_files: list[str], skip_tls: b
         # Skip tls symbols if requested
         if cols[3] == 'TLS' and skip_tls: continue
         # Skip sections, files
-        if cols[3] in ['SECTION', 'FILE', 'WEAK']: continue
-        # Skip non-global symbols
-        if cols[4] != 'GLOBAL': continue
+        if cols[3] in ['SECTION', 'FILE']: continue
+        # Skip non-global or weak symbols
+        if cols[4] not in ['GLOBAL', 'WEAK']: continue
         # Skip hidden symbols
         if cols[5] != 'DEFAULT': continue
         # Skip undefined
