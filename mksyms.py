@@ -18,6 +18,7 @@ import os
 import sys
 import subprocess
 import tomllib
+import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-l', metavar='lib', action='append', help='Library to search in')
@@ -40,7 +41,7 @@ DEFAULT_FILTERS = set([
     'GNU-stack'
 ])
 
-def _parse_config(f: str, arch: str) -> tuple[set, set]:
+def _parse_config(f: str, arch: str) -> tuple[set, set, set]:
     """
     Parses a symbol config in toml
 
@@ -54,7 +55,7 @@ def _parse_config(f: str, arch: str) -> tuple[set, set]:
     Returns
     -------
     tuple[list,list]
-        List of (refs, excludes)
+        List of (refs, excludes, exclude_files)
     """
     cfg = {}
     with open(f, 'rb') as fp:
@@ -62,24 +63,29 @@ def _parse_config(f: str, arch: str) -> tuple[set, set]:
 
     excludes = []
     refs = []
+    exclude_files = []
 
-    def parse_section(cfg: dict) -> tuple[list, list]:
+    def parse_section(cfg: dict) -> tuple[list, list, list]:
         refs = []
         excludes = []
+        exclude_files = []
         if 'exclude' in cfg: excludes += cfg['exclude']
         if 'ref' in cfg: refs += cfg['ref']
-        return (refs, excludes)
+        if 'exclude_files' in cfg: exclude_files += cfg['exclude_files']
+        return (refs, excludes, exclude_files)
 
     if 'symbols' in cfg:
-        r, e = parse_section(cfg['symbols'])
+        r, e, ef = parse_section(cfg['symbols'])
         refs += r
         excludes += e
+        exclude_files += ef
         if arch in cfg['symbols']:
-            r, e = parse_section(cfg['symbols'][arch])
+            r, e, ef = parse_section(cfg['symbols'][arch])
             refs += r
             excludes += e
+            exclude_files += ef
 
-    return (set(refs), set(excludes))
+    return (set(refs), set(excludes), set(exclude_files))
 
 def _get_tool_name(pfx: str, tool: str) -> str:
     """
@@ -108,7 +114,17 @@ def _get_syms(cmd: str, file: str) -> set[str]:
         raise RuntimeError(f'Error while reading {file}: {r.stdout}')
     return set(r.stdout.splitlines())
 
-def _get_syms_readelf(cmd: str, file: str, skip_tls: bool = True) -> set[str]:
+def _determine_file(l: str) -> str:
+    """
+    Parses object file out of a string in the format /path/to/lib.a(something.o)
+    """
+    m = re.match(r'\S+\((\S+)\)', l)
+    try:
+        return m.group(1)
+    except:
+        return ''
+
+def _get_syms_readelf(cmd: str, file: str, ignored_files: list[str], skip_tls: bool = True) -> set[str]:
     """
     Obtains a set of symbols from the file using readelf
 
@@ -124,14 +140,26 @@ def _get_syms_readelf(cmd: str, file: str, skip_tls: bool = True) -> set[str]:
         raise RuntimeError(f'Error while reading {file}: {r.stdout}')
     lines = r.stdout.splitlines()
     result = set()
+    file = ''
     for l in lines:
         # columns: num addr size type bind visibility ndx name (we only care about name and type)
         cols = l.split()
+        # Determine file
+        if len(cols) == 2 and cols[0] == 'File:':
+            file = _determine_file(cols[1])
+            continue
+        # Check if file is ignored
+        if file in ignored_files:
+            continue
         if len(cols) != 8: continue
         # Skip tls symbols if requested
         if cols[3] == 'TLS' and skip_tls: continue
         # Skip sections, files
         if cols[3] in ['SECTION', 'FILE', 'WEAK']: continue
+        # Skip non-global symbols
+        if cols[4] != 'GLOBAL': continue
+        # Skip hidden symbols
+        if cols[5] != 'DEFAULT': continue
         # Skip undefined
         if cols[6] == 'UND': continue
         result.add(cols[7])
@@ -220,12 +248,15 @@ def main():
         extra = _load_list_file(args.r)
 
     # Load config if provided
+    ignored_files = set()
     if args.c is not None:
-        e, f = _parse_config(args.c, args.a)
+        e, f, ef = _parse_config(args.c, args.a)
         extra.update(e)
         filters.update(f)
+        ignored_files.update(ef)
     print(f'Extra refs: {extra}')
     print(f'Filters: {filters}')
+    print(f'Ignored Files: {ignored_files}')
 
     libsyms = {}
     base_syms = set()
@@ -237,7 +268,7 @@ def main():
 
     # Generate base image symbols
     if args.f is not None:
-        base_syms = _get_syms_readelf(READELF, args.f, keep_tls)
+        base_syms = _get_syms_readelf(READELF, args.f, ignored_files, keep_tls)
 
     # Generate list of library symbols
     for a in LIBS:
@@ -245,7 +276,7 @@ def main():
         if l is None:
             print(f'Failed to find -l{a}')
             exit(1)
-        libsyms[a] = _get_syms_readelf(READELF, l, keep_tls)
+        libsyms[a] = _get_syms_readelf(READELF, l, ignored_files, keep_tls)
 
     diff_syms = set()
 
