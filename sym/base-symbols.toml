@@ -34,6 +34,9 @@ ref = [
     "mq_open",
     "mq_unlink",
     "mq_getattr",
+    "getrusage",
+    "rtems_libio_count_open_iops",
+    "getppid",
     
     # Cexpsh stuff
     "cexpModuleName",
