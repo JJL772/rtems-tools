@@ -412,7 +412,8 @@ endfunction()
 #  VARIABLE   - Variable to set
 function(rtems_check_lib LIB FUNC VARIABLE)
     include(CheckLibraryExists)
-    
+
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE "EXECUTABLE")
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_C_FLAGS} ${RTEMS_LDFLAGS} -lrtemsdefaultconfig")
     check_library_exists("${LIB}" "${FUNC}" "" ${VARIABLE})
     if (${VARIABLE})
