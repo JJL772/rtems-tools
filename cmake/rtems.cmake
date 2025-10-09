@@ -163,12 +163,12 @@ function(rtems_add_executable TARGET)
             PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/RTEMS-${RTEMS_BSP}"
         )
         install(
-            FILES "${CMAKE_BINARY_DIR}/${TARGET}.boot" "${CMAKE_BINARY_DIR}/${TARGET}.obj" "${CMAKE_BINARY_DIR}/${TARGET}.exe"
+            FILES "${CMAKE_BINARY_DIR}/${TARGET}.boot" "${CMAKE_BINARY_DIR}/${TARGET}.exe"
             DESTINATION "${CMAKE_INSTALL_BINDIR}/RTEMS-${RTEMS_BSP}"
         )
     else()
         install(
-            FILES "${CMAKE_BINARY_DIR}/${TARGET}.boot" "${CMAKE_BINARY_DIR}/${TARGET}.obj" "${CMAKE_BINARY_DIR}/${TARGET}.exe"
+            FILES "${CMAKE_BINARY_DIR}/${TARGET}.boot" "${CMAKE_BINARY_DIR}/${TARGET}.exe"
             DESTINATION "${CMAKE_INSTALL_BINDIR}"
         )
     endif()
