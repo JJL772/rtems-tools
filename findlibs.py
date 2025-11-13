@@ -4,49 +4,70 @@
 #===========================================================================#
 # Finds libraries in built-in compiler library paths, and explicit dirs
 # specified by -L
+# Can also be used to check for the existance of a symbol in one of the libs
 import subprocess
 import argparse
 import os
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-l', required=True, action='append', help='Library')
 parser.add_argument('-L', action='append', help='Library directory')
 parser.add_argument('-C', required=True, type=str, help='Compiler binary')
+parser.add_argument('--check-sym', type=str, dest='SYM', help='Check libraries for this symbol')
 
-def _get_compiler_lib_paths(compiler: str, args: list[str]) -> list[str]:
+def _find_lib(compiler: str, lib: str, args: list[str]) -> str | None:
     """
-    Returns a list of compiler library search paths
+    Prints library file name using gcc. It's behavior is a bit funny; lookup failures just yield the same string you passed in.
+    It also needs a fully qualified library name (libblah.a).
     """
-    r = subprocess.run([compiler, '-print-search-dirs'] + args, capture_output=True, universal_newlines=True)
+    r = subprocess.run([compiler, f'-print-file-name={lib}'] + args, capture_output=True, universal_newlines=True)
+    if r.returncode != 0 or lib == r.stdout.strip():
+        return None
+    return r.stdout.strip()
+
+def _check_sym(lib: str, sym: str) -> bool:
+    """
+    Checks if a symbol can be found in the specified library using nm
+    """
+    r = subprocess.run(['nm', '-jU', lib], capture_output=True, universal_newlines=True)
     if r.returncode != 0:
-        return []
-    lines = [x for x in r.stdout.splitlines() if x.startswith('libraries:')]
-    return [x.removeprefix(' =') for x in lines[0].split(':') if x != 'libraries']
+        print(f'NM failed with {r.stderr}')
+        return False
+    return sym in r.stdout.splitlines()
 
-
-def _find_lib(lib: str, paths: list[str]) -> str | None:
-    for p in paths:
-        p = p.removesuffix('/')
-        tocheck = [
-            f'{p}/lib{lib}.a',
-            f'{p}/{lib}.a',
-            f'{p}/{lib}',
-        ]
-        for c in tocheck:
-            if os.path.exists(c):
-                return c
-    return None
+def _make_lib_name(lib: str) -> str:
+    return f'lib{lib}.a'
 
 def main():
     args, cargs = parser.parse_known_args()
 
-    paths = _get_compiler_lib_paths(args.C, cargs)
-    if args.L is not None:
-        paths += args.L
-    
-    for l in args.l:
-        print(_find_lib(l, paths))
+    # Resolve libs
+    libs = []
+    for lib in args.l:
+        r = _find_lib(args.C, _make_lib_name(lib), cargs)
+        if r is None:
+            print(f'Could not find -l{lib}')
+            exit(1)
+        libs.append(r)
 
+    # Check for symbols if in check-syms mode
+    if args.SYM:
+        if not any([_check_sym(lib, args.SYM) for lib in libs]):
+            print(f'{args.SYM} not found in any of: {",".join(args.l)}')
+            exit(1)
+    else:
+        [print(l) for l in libs]
+
+    exit(0)
 
 if __name__ == '__main__':
+    # This is a pretty awful workaround for a CMake limitation... execute_process does not do any shell tokenizing
+    # of commands, and CMAKE_C_FLAGS usually ends up interpreted as a string
+    # To workaround this, we'll have to check for and remove the --cmake option, and re-launch ourselves using subprocess
+    if '--cmake' in sys.argv:
+        args = sys.argv
+        args.remove('--cmake')
+        exit(subprocess.run(" ".join(args), shell=True).returncode)
+
     main()
