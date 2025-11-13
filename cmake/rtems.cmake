@@ -405,21 +405,31 @@ function(rtems_add_dts TARGET FILE)
     )
 endfunction()
 
-# Check for a library. Similar to check_library_exists, but sets CMAKE_REQUIRED_FLAGS so it works right.
+# Check for a library. Similar to check_library_exists, but uses a more direct method of searching for symbols.
+# Performing an actual binary compilation can be tricky with RTEMS, and often fails due to the interdependence of
+# libraries. Using nm to directly check for defined symbols works much more reliably
 # Summary of args:
 #  LIB        - Name of the library
 #  FUNC       - Function to check for in the library
 #  VARIABLE   - Variable to set
 function(rtems_check_lib LIB FUNC VARIABLE)
-    include(CheckLibraryExists)
+    execute_process(
+        COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../findlibs.py"
+                "--cmake"
+                -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}-gcc"
+                ${CMAKE_C_FLAGS}
+                ${RTEMS_LDFLAGS}
+                "--check-sym" "${FUNC}"
+                "-l${LIB}"
+        RESULT_VARIABLE CHECK_RESULT
+    )
 
-    set(CMAKE_TRY_COMPILE_TARGET_TYPE "EXECUTABLE")
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_C_FLAGS} ${RTEMS_LDFLAGS} -lrtemsdefaultconfig")
-    check_library_exists("${LIB}" "${FUNC}" "" ${VARIABLE})
-    if (${VARIABLE})
+    if (${CHECK_RESULT} EQUAL 0)
         set(${VARIABLE} 1 PARENT_SCOPE)
+        message(STATUS "Found ${FUNC} in ${LIB}")
     else()
         set(${VARIABLE} 0 PARENT_SCOPE)
+        message(STATUS "Could NOT find ${FUNC} in ${LIB}")
     endif()
 endfunction()
 
