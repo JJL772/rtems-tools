@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
-#===========================================================================#
-# SYNOPSIS: ldep.py
-#===========================================================================#
-# Wrapper around the ldep utility by Till Straumann. Automatically invokes
-# nm to generate the symbols lists, and then ldep on top of those.
-
+# ----------------------------------------------------------------------------
+# Company    : SLAC National Accelerator Laboratory
+# ----------------------------------------------------------------------------
+# Description : Wrapper around the ldep utility by Till Straumann. 
+# Automatically invokes nm to generate the symbols lists, and then ldep on top 
+# of those.
+# ----------------------------------------------------------------------------
+# This file is part of the rtems-tools package. It is subject to
+# the license terms in the LICENSE.txt file found in the top-level directory
+# of this distribution and at:
+#    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# No part of the rtems-tools package, including this file, may be
+# copied, modified, propagated, or distributed except according to the terms
+# contained in the LICENSE.txt file.
+# ----------------------------------------------------------------------------
 import argparse
 import os
 import sys

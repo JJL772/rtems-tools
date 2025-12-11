@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
-# vim: et sw=4 ts=4
-# Preprocess a compile_commands.json so that it plays nice with clangd
+# ----------------------------------------------------------------------------
+# Company    : SLAC National Accelerator Laboratory
+# ----------------------------------------------------------------------------
+# Description : Fix a compile_commands.json so that it plays nice with clangd
 # Does the following:
 #  - removes arguments that clangd cannot understand (i.e. -qrtems)
 #  - Adds -I for each -B search path
 #  - Adds built-in compiler include paths to the command line
+# ----------------------------------------------------------------------------
+# This file is part of the rtems-tools package. It is subject to
+# the license terms in the LICENSE.txt file found in the top-level directory
+# of this distribution and at:
+#    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# No part of the rtems-tools package, including this file, may be
+# copied, modified, propagated, or distributed except according to the terms
+# contained in the LICENSE.txt file.
+# ----------------------------------------------------------------------------
 
 import json
 import argparse
@@ -92,3 +103,4 @@ def main():
 if __name__ == '__main__':
     main()
 
+# vim: et sw=4 ts=4

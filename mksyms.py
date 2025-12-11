@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
-#===========================================================================#
-# SYNOPSIS: mksyms.py
-#===========================================================================#
-# Utility to build a "diff list" of symbols present in linked libraries that 
-# aren't present in the base image. This diff list is then turned into a C
-# file that cross references the symbols so it can be linked into a new base
-# image. 
+# ----------------------------------------------------------------------------
+# Company    : SLAC National Accelerator Laboratory
+# ----------------------------------------------------------------------------
+# Description : Utility to build a "diff list" of symbols present in linked 
+# libraries that  aren't present in the base image. This diff list is then
+# turned into a C file that cross references the symbols so it can be linked
+# into a new base image. 
 # We want to create a "super" image for dynamic linking using the RTEMS RTL,
 # so that libraries like librtemsbsp.a, librtemscpu.a, etc. don't need to be
 # present on the file system at object load time. Due to linker elison,
 # symbols from static libs are usually excluded unless a symbol in its
 # object file is directly referenced. These references can be done on the
 # command line using -u, or it can be done like it is here.
+# ----------------------------------------------------------------------------
+# This file is part of the rtems-tools package. It is subject to
+# the license terms in the LICENSE.txt file found in the top-level directory
+# of this distribution and at:
+#    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# No part of the rtems-tools package, including this file, may be
+# copied, modified, propagated, or distributed except according to the terms
+# contained in the LICENSE.txt file.
+# ----------------------------------------------------------------------------
 
 import argparse
 import os

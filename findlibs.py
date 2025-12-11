@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
-#===========================================================================#
-# SYNOPSIS: findlibs.py
-#===========================================================================#
-# Finds libraries in built-in compiler library paths, and explicit dirs
-# specified by -L
+# ----------------------------------------------------------------------------
+# Company    : SLAC National Accelerator Laboratory
+# ----------------------------------------------------------------------------
+# Description : Finds libraries in built-in compiler library paths, and 
+# explicit dirs specified by -L
 # Can also be used to check for the existance of a symbol in one of the libs
+# ----------------------------------------------------------------------------
+# This file is part of the rtems-tools package. It is subject to
+# the license terms in the LICENSE.txt file found in the top-level directory
+# of this distribution and at:
+#    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# No part of the rtems-tools package, including this file, may be
+# copied, modified, propagated, or distributed except according to the terms
+# contained in the LICENSE.txt file.
+# ----------------------------------------------------------------------------
 import subprocess
 import argparse
 import os

@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
-#===========================================================================#
-# SYNOPSIS: bin2as.py
-#===========================================================================#
-# Converts a binary file to an assembly file that can be included in a build.
-# Uses the .incbin directive to link the data into the object with the best
-# possible performance.
+# ----------------------------------------------------------------------------
+# Company    : SLAC National Accelerator Laboratory
+# ----------------------------------------------------------------------------
+# Description : Converts a binary file to an assembly file that can be
+# included in a build. Uses the .incbin directive to link the data into the
+# object with the best possible performance.
+# ----------------------------------------------------------------------------
+# This file is part of the rtems-tools package. It is subject to
+# the license terms in the LICENSE.txt file found in the top-level directory
+# of this distribution and at:
+#    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# No part of the rtems-tools package, including this file, may be
+# copied, modified, propagated, or distributed except according to the terms
+# contained in the LICENSE.txt file.
+# ----------------------------------------------------------------------------
 import os
 import argparse
 
