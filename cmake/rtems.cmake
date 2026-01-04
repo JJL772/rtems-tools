@@ -37,7 +37,12 @@ function(rtems_add_simple_executable TARGET)
 endfunction()
 
 # Helper command to add an ELF executable and generate a bootable image from it
-function(rtems_add_executable TARGET)
+# Parameters:
+#  - CEXPSH            : Enable cexp symbol table generation
+#  - RTEMS_SYMS        : Enable rtems-syms symbol table generation
+#  - TARGET <target>   : Name of the target
+#  - SOURCES <srcs...> : List of sources
+function(rtems_add_executable)
     # A quick rundown on what's happening here:
     #
     #  ${TARGET}
@@ -64,6 +69,17 @@ function(rtems_add_executable TARGET)
     # NOTE: The above is only relevant for RTEMS 6. RTEMS 4.X w/cexpsh and GeSys behaves similarly,
     #  but uses different tools to accomplish the task. Those tools are not supported here.
 
+    # Parse the args
+    cmake_parse_arguments(
+        arg
+        "CEXPSH;RTEMS_SYMS"
+        "TARGET"
+        "SOURCES"
+        ${ARGN}
+    )
+    
+    set(TARGET "${arg_TARGET}")
+
     # Generate list of forced symbol refs
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c"
@@ -77,7 +93,7 @@ function(rtems_add_executable TARGET)
 
     # Generate base executable that will be used to feed rtems-syms
     add_executable(
-        ${TARGET} "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c" ${ARGN}
+        ${TARGET} "${CMAKE_BINARY_DIR}/${TARGET}-extra-syms.c" ${arg_SOURCES}
     )
 
     # Set linker flags
@@ -87,12 +103,12 @@ function(rtems_add_executable TARGET)
     )
 
     # Legacy CEXP path. Uses rtems-xsyms to generate a symbol list for use with Cexpsh.
-    if (USE_CEXP)
+    if (arg_CEXPSH)
         # Generate a symbols list off of the existing binary
         add_custom_command(
             OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
             COMMAND "${CMAKE_RTEMS_XSYMS}" -C
-                "${CMAKE_BINARY_DIR}/${TARGET}"
+                "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}"
                 "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
             DEPENDS "${TARGET}"
             COMMENT "Generating symbols list with rtems-xsyms"
@@ -103,13 +119,13 @@ function(rtems_add_executable TARGET)
             "${TARGET}-exe" $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.c"
         )
 
-    else()
+    elseif (arg_RTEMS_SYMS)
         # RTEMS RTL path. Uses rtems-syms to generate and embed a list of symbols
 
         # Generate a loadable symbols object
         add_custom_command(
             OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.obj"
-            COMMAND "${CMAKE_RTEMS_SYMS}" -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}" -o "${TARGET}.obj" "${CMAKE_BINARY_DIR}/${TARGET}"
+            COMMAND "${CMAKE_RTEMS_SYMS}" -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}" -o "${TARGET}.obj" "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}"
             DEPENDS "${TARGET}"
             COMMENT "Generating loadable symbols"
         )
@@ -118,7 +134,7 @@ function(rtems_add_executable TARGET)
         add_custom_command(
             OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
             COMMAND "${CMAKE_RTEMS_SYMS}" -e -C "${CMAKE_C_COMPILER}" -c "${CMAKE_C_FLAGS}"
-                -m "${CMAKE_BINARY_DIR}/${TARGET}.map" -o "${CMAKE_BINARY_DIR}/${TARGET}-intr.o" "${CMAKE_BINARY_DIR}/${TARGET}"
+                -m "${CMAKE_BINARY_DIR}/${TARGET}.map" -o "${CMAKE_BINARY_DIR}/${TARGET}-intr.o" "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}"
             DEPENDS "${TARGET}"
             COMMENT "Generating list of embedded symbols"
         )
@@ -126,6 +142,11 @@ function(rtems_add_executable TARGET)
         # Generate a stage 2 exe with embedded symbol table
         add_executable(
             ${TARGET}-exe $<TARGET_OBJECTS:${TARGET}> "${CMAKE_BINARY_DIR}/${TARGET}-intr.o"
+        )
+    else()
+        # Generate a stage 2 exe with embedded symbol table
+        add_executable(
+            ${TARGET}-exe $<TARGET_OBJECTS:${TARGET}>
         )
     endif()
 
