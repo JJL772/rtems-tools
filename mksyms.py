@@ -293,14 +293,31 @@ def main():
     for k,v in libsyms.items():
         diff_syms = diff_syms.union(v.difference(base_syms))
 
-    # Diff with filters
-    diff_syms = diff_syms.difference(filters)
+    filtered = set()
+
+    # Generate a list of filtered symbols (SLOW!)
     for f in filters:
+        for x in diff_syms:
+            m = re.search(f, x)
+            if m is not None:
+                filtered.add(m.group(0))
+
+    # Diff with filters
+    diff_syms = diff_syms.difference(filtered)
+    for f in filters: # Debugging...
         assert f not in diff_syms
         assert f not in extra
     
-    # Add in extra cross ref'ed symbols
-    diff_syms = diff_syms.union(extra)
+    # Add in extra ref'ed symbols
+    new_syms = set()
+    for e in extra:
+        for x in diff_syms:
+            m = re.search(e, x)
+            if m is not None:
+                new_syms.add(m.group(0))
+
+    # Add in the extra symbols
+    diff_syms = diff_syms.union(new_syms)
 
     # Generate a list of dummy symbol refs
     if args.T == 'linker': 
