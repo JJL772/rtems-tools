@@ -39,11 +39,14 @@ def _check_sym(lib: str, sym: str) -> bool:
     """
     Checks if a symbol can be found in the specified library using nm
     """
-    r = subprocess.run(['nm', '-jU', lib], capture_output=True, universal_newlines=True)
+    r = subprocess.run(['nm', '-u', '-fposix', lib], capture_output=True, universal_newlines=True)
     if r.returncode != 0:
         print(f'NM failed with {r.stderr}')
         return False
-    return sym in r.stdout.splitlines()
+    for l in r.stdout.splitlines():
+        if sym == l.split(' ')[0]:
+            return True
+    return False
 
 def _make_lib_name(lib: str) -> str:
     return f'lib{lib}.a'
