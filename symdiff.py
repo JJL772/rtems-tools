@@ -41,21 +41,20 @@ def _get_symbols(nm: str, object: str) -> tuple[set, set]:
     """
     r = subprocess.run([nm, '-fposix', object], capture_output=True, universal_newlines=True)
     if r.returncode != 0:
-        raise RuntimeError(f'{nm} returned {r.returncode}')
+        raise RuntimeError(f'{nm} returned {r.returncode}: {r.stderr}')
     lines = r.stdout.splitlines()
     undef = set()
     defined = set()
     for l in lines:
         c = l.split(' ')
         if len(c) < 2: continue
-        match c[1]:
-            case 'U':
-                if c[0] not in defined:
-                    undef.add(c[0])
-            case _:
-                defined.add(c[0])
-                if c[0] in undef:
-                    undef.remove(c[0])
+        if c[1] == 'U':
+            if c[0] not in defined:
+                undef.add(c[0])
+        else:
+            defined.add(c[0])
+            if c[0] in undef:
+                undef.remove(c[0])
     return (undef, defined)
 
 

@@ -25,7 +25,7 @@ parser.add_argument('-L', action='append', help='Library directory')
 parser.add_argument('-C', required=True, type=str, help='Compiler binary')
 parser.add_argument('--check-sym', type=str, dest='SYM', help='Check libraries for this symbol')
 
-def _find_lib(compiler: str, lib: str, args: list[str]) -> str | None:
+def _find_lib(compiler: str, lib: str, args: list[str]):
     """
     Prints library file name using gcc. It's behavior is a bit funny; lookup failures just yield the same string you passed in.
     It also needs a fully qualified library name (libblah.a).
