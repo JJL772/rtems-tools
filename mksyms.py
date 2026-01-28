@@ -50,7 +50,7 @@ DEFAULT_FILTERS = set([
     'GNU-stack'
 ])
 
-def _parse_config(f: str, arch: str) -> tuple[set, set, set]:
+def _parse_config(f: str, arch: str) -> tuple[set, set, set, set]:
     """
     Parses a symbol config in toml
 
@@ -64,7 +64,7 @@ def _parse_config(f: str, arch: str) -> tuple[set, set, set]:
     Returns
     -------
     tuple[list,list]
-        List of (refs, excludes, exclude_files)
+        List of (refs, regex, excludes, exclude_files)
     """
     cfg = {}
     with open(f, 'rb') as fp:
@@ -73,28 +73,33 @@ def _parse_config(f: str, arch: str) -> tuple[set, set, set]:
     excludes = []
     refs = []
     exclude_files = []
+    refs_regex = []
 
-    def parse_section(cfg: dict) -> tuple[list, list, list]:
+    def parse_section(cfg: dict) -> tuple[list, list, list, list]:
         refs = []
         excludes = []
         exclude_files = []
+        refs_regex = []
         if 'exclude' in cfg: excludes += cfg['exclude']
         if 'ref' in cfg: refs += cfg['ref']
         if 'exclude_files' in cfg: exclude_files += cfg['exclude_files']
-        return (refs, excludes, exclude_files)
+        if 'ref_regex' in cfg: refs_regex += cfg['ref_regex']
+        return (refs, refs_regex, excludes, exclude_files)
 
     if 'symbols' in cfg:
-        r, e, ef = parse_section(cfg['symbols'])
+        r, rg, e, ef = parse_section(cfg['symbols'])
         refs += r
         excludes += e
         exclude_files += ef
+        refs_regex += rg
         if arch in cfg['symbols']:
-            r, e, ef = parse_section(cfg['symbols'][arch])
+            r, rg, e, ef = parse_section(cfg['symbols'][arch])
             refs += r
             excludes += e
             exclude_files += ef
+            refs_regex += rg
 
-    return (set(refs), set(excludes), set(exclude_files))
+    return (set(refs), set(refs_regex), set(excludes), set(exclude_files))
 
 def _get_tool_name(pfx: str, tool: str) -> str:
     """
@@ -253,16 +258,19 @@ def main():
 
     # Gather list of additional symbol refs
     extra = set()
+    extra_regex = set()
     if args.r is not None:
         extra = _load_list_file(args.r)
 
     # Load config if provided
     ignored_files = set()
     if args.c is not None:
-        e, f, ef = _parse_config(args.c, args.a)
+        e, rg, f, ef = _parse_config(args.c, args.a)
         extra.update(e)
         filters.update(f)
         ignored_files.update(ef)
+        extra_regex.update(rg)
+
     print(f'Extra refs: {extra}')
     print(f'Filters: {filters}')
     print(f'Ignored Files: {ignored_files}')
@@ -310,11 +318,14 @@ def main():
     
     # Add in extra ref'ed symbols
     new_syms = set()
-    for e in extra:
+    for e in extra_regex:
         for x in diff_syms:
             m = re.search(e, x)
             if m is not None:
                 new_syms.add(m.group(0))
+
+    # Bring in the non-optional refs
+    new_syms = new_syms.union(extra)
 
     # Add in the extra symbols
     diff_syms = diff_syms.union(new_syms)

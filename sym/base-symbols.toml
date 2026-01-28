@@ -37,12 +37,17 @@ ref = [
     "getrusage",
     "rtems_libio_count_open_iops",
     "getppid",
-    "_+ctype.*",
+    "__ctype_ptr__",
 
     # Cexpsh stuff
     "cexpModuleName",
     "cexpModuleInfo",
     "cexpModuleUnload",
+]
+
+# Regex searches in existing symbols/libs
+ref_regex = [
+    "_+ctype.*",
 ]
 
 # These symbols cause problems during linking
