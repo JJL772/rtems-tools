@@ -37,7 +37,6 @@ ref = [
     "getrusage",
     "rtems_libio_count_open_iops",
     "getppid",
-    "__ctype_ptr__",
 
     # Cexpsh stuff
     "cexpModuleName",
