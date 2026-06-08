@@ -256,17 +256,23 @@ def add_rootfs(bld, dir: str, file: str = 'rootfs.S', macros: dict = {}, tarball
     """
     
     def generate(task):
-        bld.to_log(f'Generating {file}')
+        bld.to_log(f'Generating {file}\n')
         if tarball:
-            mkrootfs.generate_tarball(os.path.dirname(task.inputs[0].abspath()),
-                                      task.outputs[0].abspath(), macros)
+            mkrootfs.generate_tarball(
+                os.path.dirname(task.inputs[0].abspath()),
+                task.outputs[0].abspath(),
+                macros
+            )
         else:
-            mkrootfs.generate_source(os.path.dirname(task.inputs[0].abspath()),
-                                     task.outputs[0].abspath(), macros)
+            mkrootfs.generate_source(
+                os.path.dirname(task.inputs[0].abspath()),
+                task.outputs[0].abspath(),
+                macros
+            )
 
-    bld(
-        name=file,
-        target=f'{bld.out_dir}/{file}',
-        #source=[f'{dir}/rootfs.txt'],
+    return bld(
+        name=f'{bld.out_dir}/{bld.env.RTEMS_ARCH_BSP}/{file}',
+        target=f'{bld.out_dir}/{bld.env.RTEMS_ARCH_BSP}/{file}',
+        source=[f'{dir}/rootfs.txt'],
         rule=generate
     )
