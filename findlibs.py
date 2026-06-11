@@ -25,21 +25,34 @@ parser.add_argument('-L', action='append', help='Library directory')
 parser.add_argument('-C', required=True, type=str, help='Compiler binary')
 parser.add_argument('--check-sym', type=str, dest='SYM', help='Check libraries for this symbol')
 
-def _find_lib(compiler: str, lib: str, args: list[str]):
+def find_lib(compiler: str, lib: str, args: list[str]):
     """
     Prints library file name using gcc. It's behavior is a bit funny; lookup failures just yield the same string you passed in.
     It also needs a fully qualified library name (libblah.a).
     """
     r = subprocess.run([compiler, f'-print-file-name={lib}'] + args, capture_output=True, universal_newlines=True)
-    if r.returncode != 0 or lib == r.stdout.strip():
-        return None
-    return r.stdout.strip()
+    if r.returncode == 0 and lib != r.stdout.strip():
+        return r.stdout.strip()
+    
+    # Do a manual lookup based on -B (sysroot) and -L settings.
+    # -print-file-name ignores -B/-L for some reason and only looks up based on built-in library paths.
+    for k in args:
+        if k.startswith('-B'):
+            ld = k.removeprefix('-B') + '/lib/' + lib
+        elif k.startswith('-L'):
+            ld = k.removeprefix('-L') + '/' + lib
+        else:
+            continue
 
-def _check_sym(lib: str, sym: str) -> bool:
+        if os.path.exists(f'{ld}'):
+            return ld
+    return None
+
+def check_sym(lib: str, sym: str, nm: str | None = None) -> bool:
     """
     Checks if a symbol can be found in the specified library using nm
     """
-    r = subprocess.run(['nm', '-u', '-fposix', lib], capture_output=True, universal_newlines=True)
+    r = subprocess.run([nm if nm is not None else 'nm', '-u', '-fposix', lib], capture_output=True, universal_newlines=True)
     if r.returncode != 0:
         print(f'NM failed with {r.stderr}')
         return False
@@ -48,7 +61,7 @@ def _check_sym(lib: str, sym: str) -> bool:
             return True
     return False
 
-def _make_lib_name(lib: str) -> str:
+def make_lib_name(lib: str) -> str:
     return f'lib{lib}.a'
 
 def main():
@@ -57,7 +70,7 @@ def main():
     # Resolve libs
     libs = []
     for lib in args.l:
-        r = _find_lib(args.C, _make_lib_name(lib), cargs)
+        r = find_lib(args.C, make_lib_name(lib), cargs)
         if r is None:
             print(f'Could not find -l{lib}')
             exit(1)
@@ -65,7 +78,7 @@ def main():
 
     # Check for symbols if in check-syms mode
     if args.SYM:
-        if not any([_check_sym(lib, args.SYM) for lib in libs]):
+        if not any([check_sym(lib, args.SYM) for lib in libs]):
             print(f'{args.SYM} not found in any of: {",".join(args.l)}')
             exit(1)
     else:

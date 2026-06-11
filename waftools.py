@@ -17,6 +17,7 @@ from waflib.Task import Task
 from waflib import Context
 import os
 import sys
+import tools.findlibs as findlibs
 
 # HACK! I still want mkrootfs to run w/o a real package.
 sys.path.append(os.path.dirname(__file__))
@@ -383,3 +384,37 @@ def check_net_stack(conf, lib: str, name: str):
         return True
     return False
 
+
+def check_lib(conf, lib: str, symbol: str, variable: str) -> bool:
+    """
+    Performs a "library check", searching for 'symbol' in 'lib' and setting
+    a variable on the environment to indicate if it's found.
+    
+    Parameters
+    ----------
+    lib : str
+        Library name (without lib prefix or path)
+    symbol : str
+        Name of the symbol
+    variable : str
+        Name of the variable to set in conf.env
+    """
+    # Default to false
+    conf.env[variable] = False
+
+    # Find the library file itself
+    args = [f'-B{conf.env.RTEMS_PATH}/{conf.env.RTEMS_ARCH_RTEMS}/{conf.env.RTEMS_BSP}']
+    l = findlibs.find_lib(
+        conf.env.CC[0],
+        findlibs.make_lib_name(lib),
+        args,
+    )
+
+    if l is None:
+        conf.msg(f'Checking for {symbol} in {lib}', 'no', 'YELLOW')
+        return False
+
+    found = findlibs.check_sym(l, symbol, conf.env.NM[0])
+    conf.msg(f'Checking for {symbol} in {lib}', 'no' if not found else 'yes', 'GREEN' if found else 'YELLOW')
+    conf.env[variable] = True
+    return found
