@@ -14,6 +14,7 @@
 
 import rtems_waf.rtems as rtems
 from waflib.Task import Task
+from waflib import Context
 import os
 import sys
 
@@ -276,3 +277,109 @@ def add_rootfs(bld, dir: str, file: str = 'rootfs.S', macros: dict = {}, tarball
         source=[f'{dir}/rootfs.txt'],
         rule=generate
     )
+
+
+def check_include(conf, include: str, var: str, system: bool = False, add_to_defines: bool = True) -> bool:
+    """
+    Performs a compile-time check for the include.
+    
+    Parameters
+    ----------
+    conf :
+        Configuration context
+    include : str
+        Include to try
+    var : str
+        Variable to set
+    system : bool
+        When true, include with arrow brackets
+    add_to_defines: bool
+        When true, add to the list of C/C++ #defines
+    
+    Returns
+    -------
+    bool :
+        Boolean indicating whether the include was found or not.
+    """
+    
+    if system:
+        code = [f'#include <{include}>']
+    else:
+        code = [f'#include "{include}"']
+
+    try:
+        conf.check_cc(
+            fragment=rtems.test_application(code),
+            execute=False,
+            msg='Checking for %s' % (include)
+        )
+    except conf.errors.WafError:
+        setattr(conf.env, var, False)
+        return False
+
+    if add_to_defines:
+        conf.env.DEFINES += [f'{var}=1']
+    setattr(conf.env, var, True)
+    return True
+
+
+def write_config_h(conf, template: str, name: str | None = None):
+    """
+    Writes out a config.h header in the build area for this arch/bsp
+    
+    Parameters
+    ----------
+    conf :
+        Configuration context
+    template : str
+        Template file to substitute
+    name : str | None
+        Name of the config.h file. If None, it is determined by stripping the .in suffix from template.
+    """
+    with open(template, 'r') as fp:
+        tpl = fp.read()
+    
+    if name is None:
+        name = os.path.basename(template).removesuffix('.in')
+
+    for k in conf.env:
+        v = getattr(conf.env, k)
+        if type(v) in [int, float]:
+            tpl = tpl.replace(f'@{k}@', str(v))
+        elif type(v) == bool:
+            tpl = tpl.replace(f'@{k}@', str(1 if v else 0))
+        else:
+            tpl = tpl.replace(f'@{k}@', f'"str(v)"')
+
+    os.makedirs(f'{conf.bldnode.abspath()}/{conf.env.RTEMS_ARCH_BSP}/', exist_ok=True, mode=0o777)
+    with open(f'{conf.bldnode.abspath()}/{conf.env.RTEMS_ARCH_BSP}/{name}', 'w') as fp:
+        fp.write(tpl)
+
+
+def check_net_stack(conf, lib: str, name: str):
+    """
+    Determines the networking stack this BSP is configured for.
+    
+    Parameters
+    ----------
+    lib : str
+        The actual library to check for (lwip, networking, bsd)
+    name : str
+        The name of the networking stack (lwip, legacy, bsd)
+    """
+
+    # This is derived from the check in rtems-net-services:
+    conf.check_cc(
+        lib=lib,
+        ldflags=['-lrtemsdefaultconfig'],
+        uselib_store=f'NET_{name.upper()}',
+        mandatory=False
+    )
+    if f'LIB_NET_{name.upper()}' in conf.env:
+        conf.env.NET_NAME = name
+        # clean up the check
+        conf.env[f'LDFLAGS_NET_{name}'] = []
+        conf.env[f'LIB_NET_{name}'] += ['m']
+        return True
+    return False
+
