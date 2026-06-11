@@ -418,3 +418,11 @@ def check_lib(conf, lib: str, symbol: str, variable: str) -> bool:
     conf.msg(f'Checking for {symbol} in {lib}', 'no' if not found else 'yes', 'GREEN' if found else 'YELLOW')
     conf.env[variable] = True
     return found
+
+def report_feature(ctx, feature: str, enabled: bool, msg: tuple[str, str] = ('enabled', 'disabled')):
+    """Reports a feature as enabled/disabled"""
+    ctx.msg(
+        feature,
+        msg[0] if enabled else msg[1],
+        'GREEN' if enabled else 'YELLOW'
+    )
