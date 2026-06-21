@@ -171,7 +171,7 @@ def _find_pc_files(rtems_top: str) -> list[Target]:
         targets.append(Target(pkgdir, arch, rtems, bsp))
     return targets
 
-def main(parser: argparse.ArgumentParser, cmake_args: list[str] = []):
+def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [], features: dict = {}):
     parser.add_argument('--rtems-top', required=True, type=str, help='Path to the RTEMS installation directory')
     parser.add_argument('--rtems-tools', required=True, type=str, help='Path to the RTEMS tools installation directory')
     parser.add_argument('--rtems-arches', type=str, default=None, help='List of architectures to build for')
@@ -180,7 +180,32 @@ def main(parser: argparse.ArgumentParser, cmake_args: list[str] = []):
     parser.add_argument('--print-toolchain', action='store_true', help='Dump a CMake toolchain to stdout')
     parser.add_argument('--build-dir', type=str, default='build', help='Path to the build directory')
     parser.add_argument('remaining', nargs=argparse.REMAINDER)
+    
+    # Add args for feature flags
+    for k, v in features.items():
+        # Enable/disable flags (bools)
+        if v['type'] == 'bool':
+            parser.add_argument(f'--enable-{k}', action='store_true', help=v.get('help', f'Enable {k}'))
+            parser.add_argument(f'--disable-{k}', action='store_true', help=v.get('help', f'Disable {k}'))
+        # Arbitrary string arguments
+        elif v['type'] == 'str':
+            parser.add_argument(f'--{k}', type=str, default=v.get('default', ''), choices=v.get('choices', None), help=v.get('help', k))
+
     args = parser.parse_args()
+
+    # Parse arguments for feature flags
+    for k, v in features.items():
+        # Enable/disable flags (bools)
+        if v['type'] == 'bool':
+            if getattr(args, f'enable_{k.replace("-", "_")}'):
+                cmake_args.append(f'-D{v["arg"]}=ON')
+            elif getattr(args, f'disable_{k.replace("-", "_")}'):
+                cmake_args.append(f'-D{v["arg"]}=OFF')
+            else:
+                cmake_args.append(f'-D{v["arg"]}={v.get("default", "ON")}')
+        # Arbitrary string arguments
+        elif v['type'] == 'str':
+            cmake_args.append(f'-D{v["arg"]}=' + getattr(args, f'{k.replace("-","_")}', v.get("default")))
 
     arches = []
     if args.rtems_arches is not None:
@@ -233,4 +258,4 @@ def main(parser: argparse.ArgumentParser, cmake_args: list[str] = []):
 
 
 if __name__ == '__main__':
-    main(argparse.ArgumentParser())
+    cmake_configure(argparse.ArgumentParser())
