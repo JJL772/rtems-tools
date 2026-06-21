@@ -329,8 +329,10 @@ def check_include(conf, include: str, var: str, system: bool = False, add_to_def
 
 def write_config_h(conf, template: str, name: str | None = None):
     """
-    Writes out a config.h header in the build area for this arch/bsp
-    
+    Writes out a config.h header in the build area for this arch/bsp.
+
+    NOTE: This should be called during the build step as a pre function!
+
     Parameters
     ----------
     conf :
@@ -355,8 +357,8 @@ def write_config_h(conf, template: str, name: str | None = None):
         else:
             tpl = tpl.replace(f'@{k}@', f'"str(v)"')
 
-    os.makedirs(f'{conf.bldnode.abspath()}/{conf.env.RTEMS_ARCH_BSP}/', exist_ok=True, mode=0o777)
-    with open(f'{conf.bldnode.abspath()}/{conf.env.RTEMS_ARCH_BSP}/{name}', 'w') as fp:
+    os.makedirs(f'{conf.out_dir}/{conf.env.RTEMS_ARCH_BSP}/', exist_ok=True, mode=0o777)
+    with open(f'{conf.out_dir}/{conf.env.RTEMS_ARCH_BSP}/{name}', 'w') as fp:
         fp.write(tpl)
 
 

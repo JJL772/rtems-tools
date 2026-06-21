@@ -449,9 +449,9 @@ function(rtems_check_lib LIB FUNC VARIABLE)
     execute_process(
         COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../findlibs.py"
                 "--cmake"
-                -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}-gcc"
+                -C "${CMAKE_C_COMPILER}"
                 ${CMAKE_C_FLAGS}
-                ${RTEMS_LDFLAGS}
+                ${CMAKE_EXE_LINKER_FLAGS}
                 "--check-sym" "${FUNC}"
                 "-l${LIB}"
         RESULT_VARIABLE CHECK_RESULT
