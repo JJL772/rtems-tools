@@ -106,7 +106,7 @@ def _get_tool_name(pfx: str, tool: str) -> str:
     Returns the tool name based on tool prefix (if any)
     """
     if len(pfx) > 0:
-        return f'{pfx}-{tool}'
+        return f'{pfx}{tool}'
     return tool
 
 def _get_compiler_lib_paths(compiler: str) -> list[str]:

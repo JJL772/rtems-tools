@@ -298,7 +298,7 @@ function(rtems_include_libs)
             OUTPUT "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
             COMMAND "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../mksyms.py"
                 -o "${CMAKE_BINARY_DIR}/${arg_TARGET}-inc-syms.lds"
-                -C "${RTEMS_ARCH}-rtems${RTEMS_TOOL_VERSION}"
+                -C "${RTEMS_TOOLS_TOP}/${RTEMS_TOOL_PREFIX}"
                 -N "__symbolRefIncLibs"
                 -T "linker"
                 -L "${RTEMS_BSP_DIR}/lib"
