@@ -15,6 +15,9 @@
 import rtems_waf.rtems as rtems
 from waflib.Task import Task
 from waflib import Context
+from waflib.TaskGen import feature, extension
+import waflib.TaskGen as Taskgen
+import waflib
 import os
 import sys
 import tools.findlibs as findlibs
@@ -426,3 +429,33 @@ def report_feature(ctx, feature: str, enabled: bool, msg: tuple[str, str] = ('en
         msg[0] if enabled else msg[1],
         'GREEN' if enabled else 'YELLOW'
     )
+
+"""
+Generates a flat binary with the file extension .boot
+If your app's name is 'my-app.exe', it will generate a 'my-app.boot' for you.
+
+Simply add to your app's 'features' list
+"""
+@feature('boot')
+@Taskgen.after('process_use')
+def generate_boot_file(self):
+    path = f"{self.bld.out_dir}/{self.env.RTEMS_ARCH_BSP}/{self.target}"
+    out = os.path.splitext(path)[0] + '.boot'
+
+    class bootTask(Task):
+        color = 'YELLOW'
+
+        def __init__(self, *args, **kws):
+            super().__init__(*args, **kws)
+            # Always run after the linker task...
+            self.run_after.add(self.generator.link_task)
+
+        def run(self):
+            return 0 != self.exec_command(
+                f"{self.env.OBJCOPY[0]} -O binary {path} {out}"
+            )
+
+        def __str__(self):
+            return f'Generating {os.path.basename(out)}'
+
+    t = self.create_task('bootTask')
