@@ -48,6 +48,9 @@ set(RTEMS_VERSION "$${RTEMS_MAJOR}.$${RTEMS_MINOR}.$${RTEMS_REVISION}")
 set(RTEMS_TOOL_VERSION "rtems$${RTEMS_MAJOR}")
 set(RTEMS_TOOL_PREFIX "$${RTEMS_ARCH}-$${RTEMS_TOOL_VERSION}-")
 
+# Top of the BSP directory
+set(RTEMS_BSP_DIR "$${RTEMS_TOP}/$${RTEMS_ARCH}-rtems$${RTEMS_MAJOR}/$${RTEMS_BSP}")
+
 set(CMAKE_C_COMPILER "$${RTEMS_TOOLS_TOP}/$${RTEMS_TOOL_PREFIX}gcc")
 set(CMAKE_CXX_COMPILER "$${RTEMS_TOOLS_TOP}/$${RTEMS_TOOL_PREFIX}g++")
 set(CMAKE_ASM_COMPILER "$${RTEMS_TOOLS_TOP}/$${RTEMS_TOOL_PREFIX}gcc")
@@ -70,8 +73,8 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 set(CMAKE_C_FLAGS "${CFLAGS}")
 set(CMAKE_CXX_FLAGS "${CFLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${LIBS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${LIBS} -Wl,--undefined -Wl,-r -nostdlib")
-set(CMAKE_MODULE_LINKER_FLAGS "${LIBS} -Wl,--undefined -Wl,-r -nostdlib")
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--undefined -Wl,-r -nostdlib")
+set(CMAKE_MODULE_LINKER_FLAGS "-Wl,--undefined -Wl,-r -nostdlib")
 """
 
 class Target:
@@ -249,6 +252,7 @@ def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [],
 
     # Run the configure
     for t in toolchains:
+        print(f'\n--> Configuring for {t.arch_bsp()} <--\n')
         subprocess.run([
             'cmake',
             '.',

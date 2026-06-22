@@ -218,25 +218,16 @@ function(rtems_add_object TARGET BASE_TARGET)
         ${ARGN}
     )
 
-    # Generate a normal ELF file that can be used with either Cexp or RTL loaders
-    add_executable(
-        ${TARGET}-elf ${ARGN}
-    )
-
-    # Set module linker flags
-    separate_arguments(RTEMS_MODULE_LDFLAGS)
-    target_link_options(
-        ${TARGET}-elf PRIVATE "${RTEMS_MODULE_LDFLAGS}"
-    )
-
-    # Tweak the name to a <TARGET>.obj
-    set_target_properties(
-        ${TARGET}-elf
-        PROPERTIES
-            LIBRARY_OUTPUT_NAME "${TARGET}"
-            RUNTIME_OUTPUT_NAME "${TARGET}"
-            SUFFIX ".obj"
-            PREFIX ""
+    # Add a custom command to generate the generic elf object.
+    # Cannot use add_library/add_executable because it appends either -shared, or pulls in other undesirable link flags
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.obj
+        COMMAND ${CMAKE_C_COMPILER}
+            -Wl,-r
+            -nostdlib
+            $<TARGET_OBJECTS:${TARGET}>
+            -o ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.obj
+        COMMAND_EXPAND_LISTS
     )
 
     add_custom_command(
@@ -257,7 +248,7 @@ function(rtems_add_object TARGET BASE_TARGET)
 
     add_custom_target(
         "${TARGET}-obj" ALL
-        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.rap"
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.rap" "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.obj"
     )
 
     # Install the resutling loadable RTL object
