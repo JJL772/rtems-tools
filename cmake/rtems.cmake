@@ -207,6 +207,49 @@ function(rtems_add_executable)
     endif()
 endfunction()
 
+# Adds a target to generate a u-boot bootable image (not flat bin)
+# Parameters:
+#  TARGET      - Name of the target
+function(rtems_add_uboot_image TARGET LOADADDR)
+    #$ mkimage -A arm64 -O rtems -T kernel -a 0x10000 -e 0x10000 -n RTEMS -d ticker.bin.gz rtems.img
+    
+    if ("${RTEMS_ARCH}" STREQUAL "aarch64")
+        set(ARCH "arm64")
+    else()
+        set(ARCH "${RTEMS_ARCH}")
+    endif()
+
+    # Compress the flat binary with gzip
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.boot.gz"
+        COMMAND gzip -9 "${CMAKE_BINARY_DIR}/${TARGET}.boot" -S .gz -k
+        DEPENDS "${TARGET}-boot"
+        COMMENT "Compressing bootfile with gzip"
+    )
+    
+    # Generate the actual image
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.img"
+        # "${RTEMS_TOOLS_TOP}/mkimage.py"
+        COMMAND mkimage
+            -A ${ARCH}
+            -O rtems
+            -T kernel
+            -a ${LOADADDR}
+            -e ${LOADADDR}
+            -n RTEMS # TODO: Make it namable!
+            -d "${CMAKE_BINARY_DIR}/${TARGET}.boot.gz"
+            "${CMAKE_BINARY_DIR}/${TARGET}.img"
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.boot.gz"
+        COMMENT "Generating U-Boot image for ${TARGET}"
+    )
+    
+    add_custom_target(
+        "${TARGET}-img" ALL
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.img"
+    )
+endfunction()
+
 # Add a new object
 # Parameters:
 #  TARGET       - Name of the target to add
