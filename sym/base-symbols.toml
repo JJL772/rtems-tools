@@ -37,11 +37,6 @@ ref = [
     "getrusage",
     "rtems_libio_count_open_iops",
     "getppid",
-
-    # Cexpsh stuff
-    "cexpModuleName",
-    "cexpModuleInfo",
-    "cexpModuleUnload",
 ]
 
 # Regex searches in existing symbols/libs
@@ -59,6 +54,33 @@ exclude = [
 
 # These files cause issues on i386
 [symbols.i386]
+exclude_files = [
+    "libm_a-catanhl.o",
+    "libm_a-s_scalbnl.o",
+    "libm_a-f_lrintl.o",
+    "libm_a-f_rintl.o",
+    "libm_a-f_llrintl.o",
+    "libm_a-s_logl.o",
+    "libm_a-casinl.o",
+    "libm_a-s_expl.o",
+    "libm_a-cacoshl.o",
+    "libm_a-e_powl.o",
+    "libm_a-csinhl.o",
+    "libm_a-cacosl.o",
+    "libm_a-log10l.o",
+    "libm_a-ccosl.o",
+    "libm_a-b_tgammal.o",
+    "libm_a-s_fmal.o",
+    "libm_a-ldexpl.o",
+    "libm_a-scalblnl.o",
+    "libm_a-casinhl.o",
+    "libm_a-s_asinhl.o",
+    "libm_a-e_atanhl.o",
+    "libm_a-e_acoshl.o"
+]
+
+# These files cause issues on aarch64
+[symbols.aarch64]
 exclude_files = [
     "libm_a-catanhl.o",
     "libm_a-s_scalbnl.o",
