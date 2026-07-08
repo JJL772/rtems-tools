@@ -222,8 +222,8 @@ function(rtems_add_uboot_image TARGET LOADADDR)
     # Compress the flat binary with gzip
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${TARGET}.boot.gz"
-        COMMAND gzip -9 "${CMAKE_BINARY_DIR}/${TARGET}.boot" -S .gz -k
-        DEPENDS "${TARGET}-boot"
+        COMMAND gzip -9 "${CMAKE_BINARY_DIR}/${TARGET}.boot" -S .gz -k -f
+        DEPENDS "${CMAKE_BINARY_DIR}/${TARGET}.boot"
         COMMENT "Compressing bootfile with gzip"
     )
     
