@@ -117,6 +117,10 @@ class Target:
         """Returns the arch bsp string, i.e. aarch64-rtems7-k26"""
         return f'{self.arch}-{self.rtems}-{self.bsp}'
 
+    def arch_rtems(self):
+        """Returns the arch-rtems string, i.e. powerpc-rtems7"""
+        return f'{self.arch}-{self.rtems}'
+
     def __repr__(self):
         return str({
             'cflags': self.cflags,
@@ -175,15 +179,17 @@ def _find_pc_files(rtems_top: str) -> list[Target]:
     return targets
 
 def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [], features: dict = {}):
-    parser.add_argument('--rtems-top', required=True, type=str, help='Path to the RTEMS installation directory')
-    parser.add_argument('--rtems-tools', required=True, type=str, help='Path to the RTEMS tools installation directory')
+    parser.add_argument('--rtems-top', type=str, help='Path to the RTEMS-top area, which contains "target" and "host". Used for SLAC deployments. May be provided instead of --rtems & --rtems-tools')
+    parser.add_argument('--rtems', type=str, help='Path to the RTEMS installation directory')
+    parser.add_argument('--rtems-tools', type=str, help='Path to the RTEMS tools installation directory')
+    parser.add_argument('--prefix', type=str, help='Installation prefix for the binaries, defaults to ${rtems-top}/target/rtems')
     parser.add_argument('--rtems-arches', type=str, default=None, help='List of architectures to build for')
     parser.add_argument('--rtems-bsps', type=str, default=None, help='List of RTEMS BSPs to build for')
     parser.add_argument('--list-bsps', action='store_true', help='Show list of available BSPs')
     parser.add_argument('--print-toolchain', action='store_true', help='Dump a CMake toolchain to stdout')
     parser.add_argument('--build-dir', type=str, default='build', help='Path to the build directory')
     parser.add_argument('remaining', nargs=argparse.REMAINDER)
-    
+
     # Add args for feature flags
     for k, v in features.items():
         # Enable/disable flags (bools)
@@ -195,6 +201,30 @@ def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [],
             parser.add_argument(f'--{k}', type=str, default=v.get('default', ''), choices=v.get('choices', None), help=v.get('help', k))
 
     args = parser.parse_args()
+
+    # SLAC deployment style
+    if args.rtems_top:
+        print('Configuring with SLAC deployment style')
+        args.rtems = f'{args.rtems_top}/target/rtems'
+        args.rtems_tools = f'{args.rtems_top}/host/linux-x86_64'
+
+    # Manual validation :(
+    if not args.rtems:
+        print('--rtems must be provided, or --rtems-top')
+        parser.print_help()
+        exit(1)
+    if not args.rtems_tools:
+        print('--rtems-tools must be provided, or --rtems-top')
+        parser.print_help()
+        exit(1)
+
+    # Default the install prefix if not provided
+    if args.prefix is None and args.rtems_top:
+        args.prefix = f'{args.rtems_top}/target/rtems'
+
+    print(f'rtems={args.rtems}')
+    print(f'rtems-tools={args.rtems_tools}')
+    print(f'prefix={args.prefix}')
 
     # Parse arguments for feature flags
     for k, v in features.items():
@@ -219,7 +249,7 @@ def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [],
         bsps = args.rtems_bsps.split(',')
 
     toolchains: list[Target] = []
-    for target in _find_pc_files(args.rtems_top):
+    for target in _find_pc_files(args.rtems):
         # Filter by arch
         if len(arches) > 0 and target.arch not in arches:
             continue
@@ -237,7 +267,7 @@ def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [],
     # Dump toolchains to stdout?
     if args.print_toolchain:
         for t in toolchains:
-            print(t.generate_toolchain(args.rtems_top, args.rtems_tools))
+            print(t.generate_toolchain(args.rtems, args.rtems_tools))
     
     os.makedirs(args.build_dir, exist_ok=True)
     
@@ -245,7 +275,7 @@ def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [],
     for t in toolchains:
         file = f'{args.build_dir}/{t.arch_bsp()}.cmake'
         with open(file, 'w') as fp:
-            fp.write(t.generate_toolchain(args.rtems_top, args.rtems_tools))
+            fp.write(t.generate_toolchain(args.rtems, args.rtems_tools))
 
     if '--' in args.remaining:
         args.remaining.remove('--')
@@ -253,12 +283,16 @@ def cmake_configure(parser: argparse.ArgumentParser, cmake_args: list[str] = [],
     # Run the configure
     for t in toolchains:
         print(f'\n--> Configuring for {t.arch_bsp()} <--\n')
+        extra_args = []
+        if args.prefix:
+            extra_args.append(f'-DCMAKE_INSTALL_PREFIX={args.prefix}/{t.arch_rtems()}/{t.bsp}')
+
         subprocess.run([
             'cmake',
             '.',
             f'-B{args.build_dir}/{t.arch_bsp()}',
             f'-DCMAKE_TOOLCHAIN_FILE={args.build_dir}/{t.arch_bsp()}.cmake'
-        ] + cmake_args + args.remaining)
+        ] + cmake_args + extra_args + args.remaining)
 
 
 if __name__ == '__main__':
