@@ -87,7 +87,7 @@ def main():
         for a in f['arguments']:
             if a.startswith('-B'):
                 f['arguments'].append(a.replace('-B', '-I') + '/include')
-                break
+
         if args.INCLUDES is None:
             args.INCLUDES = []
         f['arguments'] += ['-I' + x for x in args.INCLUDES]
