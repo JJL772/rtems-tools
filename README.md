@@ -6,6 +6,7 @@ Miscellaneous RTEMS, scripts, tools and other utilities.
 
 * CMake toolchains for cross compiling for RTEMS via CMake.
 * Misc utilities (mkrootfs, bin2as, fix-clangdb, etc.)
+* OpenOCD configurations
 
 ## Tools
 
