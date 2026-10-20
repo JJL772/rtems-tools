@@ -75,6 +75,8 @@ def main():
             f['arguments'] = shlex.split(f['command'])
 
     for f in j:
+        if '-mcpu=5282' in f['arguments']:
+            f['arguments'].append('-D__mcf528x__')
         for toremove in REMOVE_ARGS:
             try:
                 f['arguments'].remove(toremove)
