@@ -26,12 +26,16 @@ def get_compiler_include_paths(compiler: str) -> list[str]:
     """
     Returns a list of compiler built-in include paths
     """
-    r = subprocess.run([compiler, '-E', '-Wp,-v', '-xc', '/dev/null'], capture_output=True)
+    forcetype = '-xc'
+    if compiler.endswith('++'):
+        forcetype = '-xc++'
+    r = subprocess.run([compiler, '-E', '-Wp,-v', forcetype, '/dev/null'], capture_output=True)
     o = r.stderr.decode('utf-8').split('\n')
     out = []
     for l in o:
         if l.startswith(' '):
             out.append('-I' + l.removeprefix(' '))
+            out.append('-isystem' + l.removeprefix(' '))
     return out
 
 def clean_arg(arg: str) -> str:
@@ -56,6 +60,10 @@ REMOVE_ARGS = [
     '-mcpu=5282' # clang only supports a few 68k CPUs
 ]
 
+ADD_ARGS = [
+    '-D__rtems__=1',
+]
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', dest='FILE', type=str, required=True)
@@ -75,13 +83,17 @@ def main():
             f['arguments'] = shlex.split(f['command'])
 
     for f in j:
+        # Fixup for 5282, since we're stripping the -mcpu arg.
         if '-mcpu=5282' in f['arguments']:
             f['arguments'].append('-D__mcf528x__')
+
         for toremove in REMOVE_ARGS:
             try:
                 f['arguments'].remove(toremove)
             except:
                 pass
+
+        f['arguments'] += ADD_ARGS
 
         if args.COMPILER is not None:
             f['arguments'][0] = args.COMPILER
