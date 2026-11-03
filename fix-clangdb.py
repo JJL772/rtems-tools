@@ -85,7 +85,7 @@ def main():
     for f in j:
         # Fixup for 5282, since we're stripping the -mcpu arg.
         if '-mcpu=5282' in f['arguments']:
-            f['arguments'].append('-D__mcf528x__')
+            f['arguments'] += ['-D__mcf528x__=1', '-D__mcf_cpu_5282=1', '-D__mcf_family_5282=1', '-D__mcfisaaplus__=1', '-D__mcfv2__=1', '-D__mcoldfire__=1']
 
         for toremove in REMOVE_ARGS:
             try:
