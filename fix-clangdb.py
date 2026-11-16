@@ -87,6 +87,10 @@ def main():
         if '-mcpu=5282' in f['arguments']:
             f['arguments'] += ['-D__mcf528x__=1', '-D__mcf_cpu_5282=1', '-D__mcf_family_5282=1', '-D__mcfisaaplus__=1', '-D__mcfv2__=1', '-D__mcoldfire__=1']
 
+        # Ugly hack to enable float128, since clang doesn't seem to really support it for i386.
+        if '-march=pentium':
+            f['arguments'] += ['-D__float128=long double']
+
         for toremove in REMOVE_ARGS:
             try:
                 f['arguments'].remove(toremove)
